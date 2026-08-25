@@ -3,217 +3,161 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Client Agreement Management — Demo</title>
+<title>Client & Agreement Management — Demo</title>
 <style>
-:root{
-  --bg:#f5f7fb; --card:#fff; --text:#172033; --muted:#6b7280; --line:#e7eaf0;
-  --primary:#315efb; --primary2:#2449d8; --success:#138a5b; --warning:#b77900;
-  --danger:#c43d4b; --purple:#7257d9; --shadow:0 8px 30px rgba(25,35,60,.07);
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-button,input,select{font:inherit}
-button{cursor:pointer}
-.app{display:flex;min-height:100vh}
-.sidebar{width:250px;background:#111827;color:#fff;padding:24px 16px;position:fixed;inset:0 auto 0 0}
-.logo{display:flex;align-items:center;gap:11px;padding:4px 10px 28px;font-weight:750;font-size:18px}
-.logo-mark{width:34px;height:34px;border-radius:10px;background:#315efb;display:grid;place-items:center;font-size:18px}
-.nav-title{font-size:11px;color:#8b95a7;text-transform:uppercase;letter-spacing:.08em;margin:18px 12px 8px}
-.nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;margin:3px 0;border-radius:9px;color:#b9c1cf;text-decoration:none;font-size:14px}
-.nav a.active,.nav a:hover{background:#202b44;color:#fff}
-.sidebar-bottom{position:absolute;bottom:22px;left:20px;right:20px;border-top:1px solid #293346;padding-top:18px}
-.user{display:flex;gap:10px;align-items:center;font-size:13px}
-.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#dbe5ff;color:#315efb;font-weight:700}
-.main{margin-left:250px;flex:1;padding:28px 34px 50px}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}
-.breadcrumb{font-size:13px;color:var(--muted);margin-bottom:6px}
-h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
-.subtitle{color:var(--muted);font-size:14px}
-.actions{display:flex;gap:10px}
-.btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:10px 14px;border-radius:9px;font-weight:650;font-size:13px}
-.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
-.btn.primary:hover{background:var(--primary2)}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:var(--shadow)}
-.stat-top{display:flex;justify-content:space-between;align-items:center}
-.stat-label{font-size:13px;color:var(--muted)}
-.stat-icon{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#edf2ff;color:var(--primary)}
-.stat-value{font-size:26px;font-weight:750;margin:10px 0 3px}
-.stat-foot{font-size:12px;color:var(--muted)}
-.stat-foot strong{color:var(--success)}
-.panel{background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);margin-top:20px}
-.panel-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}
-.panel-title{font-weight:750;font-size:15px}
-.filters{display:flex;gap:8px;align-items:center}
-.input,.select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 11px;color:var(--text);font-size:12px;outline:none}
-.input:focus,.select:focus{border-color:#9ab0ff}
-.search{width:230px}
-.table-wrap{overflow:auto}
-table{width:100%;border-collapse:collapse;min-width:900px}
-th,td{text-align:left;padding:14px 20px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
-th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:#fafbfc}
-tr:hover td{background:#fbfcff}
-.client{font-weight:700}.agreement-no{font-size:11px;color:var(--muted);margin-top:3px}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
-.badge.active{background:#e7f7ef;color:var(--success)}
-.badge.warning{background:#fff4d8;color:var(--warning)}
-.badge.danger{background:#fdebed;color:var(--danger)}
-.badge.purple{background:#eeeaff;color:var(--purple)}
-.days{font-weight:700}.days.warning{color:var(--warning)}.days.danger{color:var(--danger)}
-.owner{display:flex;align-items:center;gap:8px}.mini{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#e9eefc;color:#315efb;font-size:10px;font-weight:750}
-.more{border:0;background:transparent;font-size:18px;color:#8b93a2}
-.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}
-.reminder{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;gap:13px;align-items:flex-start}
-.reminder:last-child{border-bottom:0}
-.reminder-icon{width:32px;height:32px;border-radius:8px;background:#fff4d8;color:var(--warning);display:grid;place-items:center;flex:none}
-.reminder strong{font-size:13px}.reminder p{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
-.time{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}
-.progress{height:7px;background:#edf0f5;border-radius:99px;overflow:hidden;margin-top:9px}
-.progress > div{height:100%;background:var(--primary);border-radius:99px}
-.empty{padding:30px;text-align:center;color:var(--muted);font-size:13px}
-.overlay{display:none;position:fixed;inset:0;background:rgba(12,18,30,.45);z-index:10;padding:30px}
-.modal{max-width:900px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 20px 70px rgba(0,0,0,.22);max-height:92vh;overflow:auto}
-.modal-head{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-.modal-title{font-size:18px;font-weight:750}
-.close{border:0;background:#f3f5f8;border-radius:8px;width:34px;height:34px}
-.modal-body{padding:24px}
-.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.detail{border:1px solid var(--line);border-radius:10px;padding:13px}.detail label{display:block;font-size:10px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}.detail span{font-weight:650;font-size:13px}
-.timeline{margin-top:22px}.timeline-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.dot{width:9px;height:9px;border-radius:50%;background:var(--primary);margin-top:5px;flex:none}.timeline-item small{color:var(--muted)}
-.toast{position:fixed;right:24px;bottom:24px;background:#172033;color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);display:none;z-index:30}
-@media(max-width:1000px){.sidebar{width:210px}.main{margin-left:210px}.grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}
-@media(max-width:700px){.sidebar{display:none}.main{margin-left:0;padding:20px}.grid{grid-template-columns:1fr}.topbar{align-items:flex-start;gap:15px;flex-direction:column}.detail-grid{grid-template-columns:1fr 1fr}}
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--line:#e6eaf0;--primary:#315efb;--primary2:#2449d8;--green:#138a5b;--orange:#b77900;--red:#c43d4b;--purple:#7257d9;--shadow:0 8px 30px rgba(25,35,60,.07)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app{display:flex;min-height:100vh}.sidebar{width:250px;background:#111827;color:#fff;padding:24px 16px;position:fixed;inset:0 auto 0 0}.logo{display:flex;align-items:center;gap:11px;padding:4px 10px 28px;font-weight:750;font-size:18px}.logo-mark{width:34px;height:34px;border-radius:10px;background:#315efb;display:grid;place-items:center}.nav-title{font-size:11px;color:#8b95a7;text-transform:uppercase;letter-spacing:.08em;margin:18px 12px 8px}.nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;margin:3px 0;border-radius:9px;color:#b9c1cf;text-decoration:none;font-size:14px}.nav a.active,.nav a:hover{background:#202b44;color:#fff}.sidebar-bottom{position:absolute;bottom:22px;left:20px;right:20px;border-top:1px solid #293346;padding-top:18px}.user{display:flex;gap:10px;align-items:center;font-size:13px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#dbe5ff;color:#315efb;font-weight:700}
+.main{margin-left:250px;flex:1;padding:28px 34px 50px}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}.breadcrumb{font-size:13px;color:var(--muted);margin-bottom:6px}h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}.subtitle{color:var(--muted);font-size:14px}.actions{display:flex;gap:10px}.btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:10px 14px;border-radius:9px;font-weight:650;font-size:13px}.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.primary:hover{background:var(--primary2)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:var(--shadow)}.stat-top{display:flex;justify-content:space-between}.stat-label{font-size:13px;color:var(--muted)}.stat-icon{width:34px;height:34px;border-radius:9px;background:#edf2ff;color:var(--primary);display:grid;place-items:center}.stat-value{font-size:26px;font-weight:750;margin:10px 0 3px}.stat-foot{font-size:12px;color:var(--muted)}.stat-foot strong{color:var(--green)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);margin-top:20px}.panel-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}.panel-title{font-weight:750;font-size:15px}.filters{display:flex;gap:8px;align-items:center}.input,.select,.textarea{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 11px;color:var(--text);font-size:12px;outline:none}.input:focus,.select:focus,.textarea:focus{border-color:#9ab0ff}.search{width:240px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{text-align:left;padding:14px 20px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:#fafbfc}tr:hover td{background:#fbfcff}.client{font-weight:700}.sub{font-size:11px;color:var(--muted);margin-top:3px}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}.active{background:#e7f7ef;color:var(--green)}.warning{background:#fff4d8;color:var(--orange)}.danger{background:#fdebed;color:var(--red)}.purple{background:#eeeaff;color:var(--purple)}.owner{display:flex;align-items:center;gap:8px}.mini{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#e9eefc;color:#315efb;font-size:10px;font-weight:750}.more{border:0;background:transparent;font-size:18px;color:#8b93a2}
+.two-col{display:grid;grid-template-columns:1.25fr 1fr;gap:20px}.reminder{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;gap:13px;align-items:flex-start}.reminder:last-child{border-bottom:0}.reminder-icon{width:32px;height:32px;border-radius:8px;background:#fff4d8;color:var(--orange);display:grid;place-items:center;flex:none}.reminder strong{font-size:13px}.reminder p{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.time{margin-left:auto;color:var(--muted);font-size:11px;white-space:nowrap}
+.client-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;padding:20px}.client-card{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff}.client-card:hover{border-color:#b7c5f9;box-shadow:0 5px 18px rgba(49,94,251,.08)}.client-head{display:flex;justify-content:space-between;gap:10px}.client-logo{width:42px;height:42px;border-radius:10px;background:#edf2ff;color:#315efb;display:grid;place-items:center;font-weight:800}.contact{font-size:12px;color:var(--muted);line-height:1.8;margin-top:13px}.card-actions{display:flex;gap:7px;margin-top:14px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(12,18,30,.45);z-index:10;padding:30px}.modal{max-width:950px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 20px 70px rgba(0,0,0,.22);max-height:92vh;overflow:auto}.modal-head{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-title{font-size:18px;font-weight:750}.close{border:0;background:#f3f5f8;border-radius:8px;width:34px;height:34px}.modal-body{padding:24px}.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.field label{display:block;font-size:11px;color:var(--muted);font-weight:650;margin:0 0 6px}.field .input,.field .select,.field .textarea{width:100%}.field.full{grid-column:1/-1}.textarea{min-height:82px;resize:vertical}.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.detail{border:1px solid var(--line);border-radius:10px;padding:13px}.detail label{display:block;font-size:10px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}.detail span{font-weight:650;font-size:13px}.section-title{font-weight:750;font-size:14px;margin:24px 0 10px}.progress{height:7px;background:#edf0f5;border-radius:99px;overflow:hidden;margin-top:8px}.progress div{height:100%;background:var(--primary)}.timeline-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.dot{width:9px;height:9px;border-radius:50%;background:var(--primary);margin-top:5px;flex:none}.toast{position:fixed;right:24px;bottom:24px;background:#172033;color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);display:none;z-index:30}
+@media(max-width:1050px){.sidebar{width:210px}.main{margin-left:210px}.grid{grid-template-columns:repeat(2,1fr)}.client-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}@media(max-width:700px){.sidebar{display:none}.main{margin-left:0;padding:20px}.grid,.client-grid{grid-template-columns:1fr}.topbar{flex-direction:column;align-items:flex-start;gap:15px}.form-grid,.detail-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app">
 <aside class="sidebar">
-  <div class="logo"><div class="logo-mark">◆</div> Employee Portal</div>
-  <div class="nav-title">Workspace</div>
-  <nav class="nav">
-    <a href="#">⌂ Dashboard</a><a href="#">◫ Employees</a><a href="#">▣ Clients</a>
-    <a class="active" href="#">▤ Agreements</a><a href="#">✓ Tasks</a><a href="#">◔ Reports</a>
-  </nav>
-  <div class="nav-title">Administration</div>
-  <nav class="nav"><a href="#">⚙ Settings</a><a href="#">♙ Users & Roles</a><a href="#">✉ Notifications</a></nav>
-  <div class="sidebar-bottom"><div class="user"><div class="avatar">AM</div><div><strong>Admin Manager</strong><br><span style="color:#8b95a7">Administrator</span></div></div></div>
+<div class="logo"><div class="logo-mark">◆</div> Employee Portal</div>
+<div class="nav-title">Workspace</div>
+<nav class="nav">
+<a href="#" onclick="showPage('dashboard');return false">⌂ Dashboard</a>
+<a href="#" onclick="showPage('clients');return false">▣ Clients</a>
+<a class="active" href="#" onclick="showPage('agreements');return false">▤ Agreements</a>
+<a href="#">◫ Employees</a><a href="#">✓ Tasks</a><a href="#">◔ Reports</a>
+</nav>
+<div class="nav-title">Administration</div><nav class="nav"><a href="#">⚙ Settings</a><a href="#">♙ Users & Roles</a><a href="#">✉ Notifications</a></nav>
+<div class="sidebar-bottom"><div class="user"><div class="avatar">AM</div><div><strong>Admin Manager</strong><br><span style="color:#8b95a7">Administrator</span></div></div></div>
 </aside>
 
-<main class="main">
-  <div class="topbar">
-    <div>
-      <div class="breadcrumb">Workspace / Agreements</div>
-      <h1>Client Agreements</h1>
-      <div class="subtitle">Track contracts, renewals and client follow-ups in one place.</div>
-    </div>
-    <div class="actions">
-      <button class="btn" onclick="showToast('Report export prepared')">↓ Export Report</button>
-      <button class="btn primary" onclick="openModal()">＋ Add Agreement</button>
-    </div>
-  </div>
-
-  <section class="grid">
-    <div class="stat"><div class="stat-top"><span class="stat-label">Total Clients</span><div class="stat-icon">♙</div></div><div class="stat-value">48</div><div class="stat-foot">6 active this month</div></div>
-    <div class="stat"><div class="stat-top"><span class="stat-label">Active Agreements</span><div class="stat-icon">✓</div></div><div class="stat-value">126</div><div class="stat-foot"><strong>+8.4%</strong> vs last quarter</div></div>
-    <div class="stat"><div class="stat-top"><span class="stat-label">Expiring Soon</span><div class="stat-icon">!</div></div><div class="stat-value">12</div><div class="stat-foot">Within next 30 days</div></div>
-    <div class="stat"><div class="stat-top"><span class="stat-label">Expired</span><div class="stat-icon">◷</div></div><div class="stat-value">4</div><div class="stat-foot">Requires immediate action</div></div>
-  </section>
-
-  <section class="panel">
-    <div class="panel-head">
-      <div><div class="panel-title">Agreement Register</div><div class="subtitle" style="margin-top:3px">All client contracts and agreements</div></div>
-      <div class="filters"><input id="search" class="input search" placeholder="Search client or agreement..." oninput="renderTable()">
-        <select id="typeFilter" class="select" onchange="renderTable()"><option value="">All Types</option><option>MSA</option><option>SOW</option><option>NDA</option><option>SLA</option><option>Contract</option></select>
-        <select id="statusFilter" class="select" onchange="renderTable()"><option value="">All Status</option><option value="Active">Active</option><option value="Expiring Soon">Expiring Soon</option><option value="Expired">Expired</option></select>
-      </div>
-    </div>
-    <div class="table-wrap"><table><thead><tr><th>Client / Agreement</th><th>Type</th><th>Start Date</th><th>End Date</th><th>Department / Owner</th><th>Status</th><th>Action</th></tr></thead><tbody id="tableBody"></tbody></table></div>
-  </section>
-
-  <div class="two-col">
-    <section class="panel">
-      <div class="panel-head"><div><div class="panel-title">Upcoming Renewals</div><div class="subtitle" style="margin-top:3px">Agreements requiring attention</div></div><button class="btn" onclick="showToast('Showing all renewals')">View All</button></div>
-      <div id="renewals"></div>
-    </section>
-    <section class="panel">
-      <div class="panel-head"><div><div class="panel-title">Reminder Activity</div><div class="subtitle" style="margin-top:3px">Latest notification events</div></div></div>
-      <div class="reminder"><div class="reminder-icon">✉</div><div><strong>Client reminder sent</strong><p>TechNova Solutions · MSA-2026-014</p></div><span class="time">2h ago</span></div>
-      <div class="reminder"><div class="reminder-icon">!</div><div><strong>30-day reminder</strong><p>GreenField Logistics · SOW-2026-008</p></div><span class="time">5h ago</span></div>
-      <div class="reminder"><div class="reminder-icon">✓</div><div><strong>Renewal completed</strong><p>Acme Industries · SLA-2025-021</p></div><span class="time">Yesterday</span></div>
-      <div class="reminder"><div class="reminder-icon">!</div><div><strong>Department action required</strong><p>Vertex Global · NDA-2025-039</p></div><span class="time">Yesterday</span></div>
-    </section>
-  </div>
-</main>
+<main class="main" id="main"></main>
 </div>
 
-<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
-<div class="modal">
-  <div class="modal-head"><div><div class="modal-title" id="modalTitle">Agreement Details</div><div class="subtitle">Contract lifecycle and reminder history</div></div><button class="close" onclick="closeModal()">✕</button></div>
-  <div class="modal-body" id="modalBody"></div>
-</div>
-</div>
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-head"><div><div class="modal-title" id="modalTitle"></div><div class="subtitle" id="modalSub"></div></div><button class="close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
-const agreements=[
- {id:1,client:"TechNova Solutions",no:"MSA-2026-014",type:"MSA",start:"01 Jan 2026",end:"30 Sep 2026",days:36,dept:"Operations",owner:"A. Menon",status:"Active",pct:88,contact:"Sarah Johnson",email:"sarah@technova.example"},
- {id:2,client:"GreenField Logistics",no:"SOW-2026-008",type:"SOW",start:"15 Feb 2026",end:"24 Sep 2026",days:30,dept:"Projects",owner:"R. Nair",status:"Expiring Soon",pct:84,contact:"David Lee",email:"david@greenfield.example"},
- {id:3,client:"Vertex Global",no:"NDA-2025-039",type:"NDA",start:"10 Oct 2025",end:"02 Sep 2026",days:8,dept:"Legal",owner:"S. Thomas",status:"Expiring Soon",pct:96,contact:"Maria Chen",email:"maria@vertex.example"},
- {id:4,client:"Acme Industries",no:"SLA-2025-021",type:"SLA",start:"01 Apr 2025",end:"31 Dec 2026",days:128,dept:"Customer Success",owner:"P. Kumar",status:"Active",pct:65,contact:"James Wilson",email:"james@acme.example"},
- {id:5,client:"NorthStar Digital",no:"CON-2025-117",type:"Contract",start:"20 Mar 2025",end:"19 Aug 2026",days:-6,dept:"Finance",owner:"M. Jose",status:"Expired",pct:100,contact:"Emily Stone",email:"emily@northstar.example"},
- {id:6,client:"BluePeak Systems",no:"MSA-2026-031",type:"MSA",start:"01 Jun 2026",end:"28 Nov 2026",days:95,dept:"Operations",owner:"A. Menon",status:"Active",pct:55,contact:"Daniel Kim",email:"daniel@bluepeak.example"}
+let clients=[
+{id:1,name:"TechNova Solutions",code:"CL-001",contact:"Sarah Johnson",email:"sarah@technova.example",phone:"+91 98765 43210",industry:"Technology",manager:"A. Menon",dept:"Operations",status:"Active",description:"Strategic technology client focused on digital transformation and enterprise software services.",agreements:2},
+{id:2,name:"GreenField Logistics",code:"CL-002",contact:"David Lee",email:"david@greenfield.example",phone:"+91 98470 11223",industry:"Logistics",manager:"R. Nair",dept:"Projects",status:"Active",description:"Logistics and supply-chain partner with multiple ongoing service engagements.",agreements:2},
+{id:3,name:"Vertex Global",code:"CL-003",contact:"Maria Chen",email:"maria@vertex.example",phone:"+91 98950 77881",industry:"Consulting",manager:"S. Thomas",dept:"Legal",status:"Active",description:"Global consulting client requiring recurring NDA and project-based agreements.",agreements:1},
+{id:4,name:"Acme Industries",code:"CL-004",contact:"James Wilson",email:"james@acme.example",phone:"+91 97460 22445",industry:"Manufacturing",manager:"P. Kumar",dept:"Customer Success",status:"Active",description:"Long-term enterprise customer with SLA and managed service requirements.",agreements:1}
+];
+let agreements=[
+{id:1,client:1,no:"MSA-2026-014",type:"MSA",start:"01 Jan 2026",end:"30 Sep 2026",days:36,dept:"Operations",owner:"A. Menon",status:"Active"},
+{id:2,client:1,no:"SOW-2026-008",type:"SOW",start:"15 Feb 2026",end:"24 Sep 2026",days:30,dept:"Projects",owner:"R. Nair",status:"Expiring Soon"},
+{id:3,client:2,no:"SOW-2026-019",type:"SOW",start:"01 Mar 2026",end:"15 Dec 2026",days:112,dept:"Projects",owner:"R. Nair",status:"Active"},
+{id:4,client:2,no:"NDA-2026-005",type:"NDA",start:"10 Jan 2026",end:"10 Jan 2027",days:138,dept:"Legal",owner:"S. Thomas",status:"Active"},
+{id:5,client:3,no:"NDA-2025-039",type:"NDA",start:"10 Oct 2025",end:"02 Sep 2026",days:8,dept:"Legal",owner:"S. Thomas",status:"Expiring Soon"},
+{id:6,client:4,no:"SLA-2025-021",type:"SLA",start:"01 Apr 2025",end:"31 Dec 2026",days:128,dept:"Customer Success",owner:"P. Kumar",status:"Active"}
 ];
 
-function statusBadge(s){return s==="Active"?"<span class='badge active'>● Active</span>":s==="Expired"?"<span class='badge danger'>● Expired</span>":"<span class='badge warning'>● Expiring Soon</span>"}
-function renderTable(){
- const q=document.getElementById('search').value.toLowerCase(), t=document.getElementById('typeFilter').value, s=document.getElementById('statusFilter').value;
- const rows=agreements.filter(a=>(!q||(a.client+a.no+a.type).toLowerCase().includes(q))&&(!t||a.type===t)&&(!s||a.status===s));
- document.getElementById('tableBody').innerHTML=rows.length?rows.map(a=>`<tr>
- <td><div class="client">${a.client}</div><div class="agreement-no">${a.no}</div></td>
- <td><span class="badge purple">${a.type}</span></td><td>${a.start}</td><td>${a.end}<div class="days ${a.days<=30?'warning':''} ${a.days<=0?'danger':''}">${a.days>0?a.days+' days left':'Expired '+Math.abs(a.days)+' days ago'}</div></td>
- <td><div class="owner"><div class="mini">${a.owner.split(' ').map(x=>x[0]).join('')}</div><div>${a.dept}<br><span style="font-size:11px;color:#6b7280">${a.owner}</span></div></div></td>
- <td>${statusBadge(a.status)}</td><td><button class="more" onclick="showDetails(${a.id})">•••</button></td></tr>`).join(''):"<tr><td colspan='7' class='empty'>No agreements match your filters.</td></tr>";
+function header(title,sub,button){return `<div class="topbar"><div><div class="breadcrumb">Workspace / ${title}</div><h1>${title}</h1><div class="subtitle">${sub}</div></div><div class="actions">${button||''}</div></div>`}
+function badge(s){return s==="Active"?'<span class="badge active">● Active</span>':s==="Expired"?'<span class="badge danger">● Expired</span>':'<span class="badge warning">● Expiring Soon</span>'}
+function showPage(page){
+if(page==="clients") renderClients(); else if(page==="agreements") renderAgreements(); else renderDashboard();
+document.querySelectorAll('.nav a').forEach(a=>a.classList.remove('active'));
 }
-function renderRenewals(){
- const list=agreements.filter(a=>a.days<=36&&a.days>0).sort((a,b)=>a.days-b.days);
- document.getElementById('renewals').innerHTML=list.map(a=>`<div class="reminder"><div class="reminder-icon">${a.days<=15?'!':'◷'}</div><div style="width:100%"><strong>${a.client}</strong><p>${a.type} · ${a.no} · ${a.days} days remaining</p><div class="progress"><div style="width:${a.pct}%"></div></div></div><button class="btn" onclick="showDetails(${a.id})">Review</button></div>`).join('');
+function renderDashboard(){
+document.getElementById('main').innerHTML=header("Client & Agreement Management","Centralized client profiles, contracts, renewals and reminders.",`<button class="btn primary" onclick="openClient()">＋ Add Client</button><button class="btn" onclick="openAgreement()">＋ Add Agreement</button>`) +
+`<section class="grid">
+<div class="stat"><div class="stat-top"><span class="stat-label">Total Clients</span><div class="stat-icon">♙</div></div><div class="stat-value">${clients.length}</div><div class="stat-foot">Active client profiles</div></div>
+<div class="stat"><div class="stat-top"><span class="stat-label">Total Agreements</span><div class="stat-icon">▤</div></div><div class="stat-value">${agreements.length}</div><div class="stat-foot"><strong>100%</strong> linked to clients</div></div>
+<div class="stat"><div class="stat-top"><span class="stat-label">Expiring Soon</span><div class="stat-icon">!</div></div><div class="stat-value">${agreements.filter(a=>a.days<=30&&a.days>0).length}</div><div class="stat-foot">Within next 30 days</div></div>
+<div class="stat"><div class="stat-top"><span class="stat-label">Pending Actions</span><div class="stat-icon">◷</div></div><div class="stat-value">5</div><div class="stat-foot">Department follow-ups</div></div></section>
+<div class="two-col">
+<section class="panel"><div class="panel-head"><div><div class="panel-title">Clients</div><div class="subtitle">Quick access to client profiles</div></div><button class="btn" onclick="showPage('clients')">View All</button></div><div class="client-grid" style="grid-template-columns:1fr 1fr">${clients.slice(0,4).map(clientCard).join('')}</div></section>
+<section class="panel"><div class="panel-head"><div><div class="panel-title">Upcoming Renewals</div><div class="subtitle">Agreements requiring attention</div></div></div>${agreements.filter(a=>a.days<=36&&a.days>0).sort((a,b)=>a.days-b.days).map(a=>`<div class="reminder"><div class="reminder-icon">!</div><div><strong>${clientName(a.client)}</strong><p>${a.type} · ${a.no} · ${a.days} days remaining</p></div><button class="btn" onclick="showAgreement(${a.id})">Review</button></div>`).join('')}</section></div>`;
 }
-function showDetails(id){
- const a=agreements.find(x=>x.id===id);
- document.getElementById('modalTitle').textContent=a.client+' — '+a.type;
- document.getElementById('modalBody').innerHTML=`<div class="detail-grid">
- <div class="detail"><label>Agreement Number</label><span>${a.no}</span></div><div class="detail"><label>Agreement Type</label><span>${a.type}</span></div><div class="detail"><label>Status</label><span>${statusBadge(a.status)}</span></div>
- <div class="detail"><label>Start Date</label><span>${a.start}</span></div><div class="detail"><label>Contract End Date</label><span>${a.end}</span></div><div class="detail"><label>Days Remaining</label><span>${a.days>0?a.days+' days':'Expired'}</span></div>
- <div class="detail"><label>Responsible Department</label><span>${a.dept}</span></div><div class="detail"><label>Agreement Owner</label><span>${a.owner}</span></div><div class="detail"><label>Client Contact</label><span>${a.contact}</span></div>
- </div>
- <div style="display:flex;gap:9px;margin-top:20px"><button class="btn primary" onclick="sendReminder('${a.client}')">✉ Send Client Reminder</button><button class="btn" onclick="showToast('Renewal workflow started');closeModal()">↻ Start Renewal</button><button class="btn" onclick="showToast('Document download started')">↓ Download Agreement</button></div>
- <div class="timeline"><div class="panel-title" style="margin-bottom:8px">Agreement Activity</div>
- <div class="timeline-item"><div class="dot"></div><div><strong>Agreement created</strong><br><small>Admin Manager · 01 Jan 2026</small></div></div>
- <div class="timeline-item"><div class="dot"></div><div><strong>60-day reminder sent to ${a.dept}</strong><br><small>System automation · 02 Aug 2026</small></div></div>
- <div class="timeline-item"><div class="dot"></div><div><strong>30-day client follow-up</strong><br><small>Pending · Responsible owner: ${a.owner}</small></div></div>
- </div>`;
- document.getElementById('overlay').style.display='block';
+function clientCard(c){return `<div class="client-card"><div class="client-head"><div style="display:flex;gap:10px"><div class="client-logo">${initials(c.name)}</div><div><div class="client">${c.name}</div><div class="sub">${c.code} · ${c.industry}</div></div></div>${badge(c.status)}</div><div class="contact">♙ ${c.contact}<br>✉ ${c.email}<br>☎ ${c.phone}</div><div class="sub" style="margin-top:9px">${c.agreements} agreement(s)</div><div class="card-actions"><button class="btn" onclick="showClient(${c.id})">View Client</button><button class="btn primary" onclick="openAgreement(${c.id})">＋ Agreement</button></div></div>`}
+function renderClients(){
+document.getElementById('main').innerHTML=header("Clients","Manage client profiles and all agreements associated with each client.",`<input id="clientSearch" class="input search" placeholder="Search clients..." oninput="filterClients()"><button class="btn primary" onclick="openClient()">＋ Add Client</button>`) + `<section class="panel"><div class="panel-head"><div><div class="panel-title">Client Directory</div><div class="subtitle">${clients.length} client accounts</div></div></div><div id="clientGrid" class="client-grid">${clients.map(clientCard).join('')}</div></section>`;
 }
-function openModal(){document.getElementById('modalTitle').textContent='Add New Agreement';document.getElementById('modalBody').innerHTML=`<div class="detail-grid">
- <div class="detail"><label>Client</label><select class="select" style="width:100%"><option>Select client...</option><option>TechNova Solutions</option><option>GreenField Logistics</option><option>Vertex Global</option><option>Acme Industries</option></select></div>
- <div class="detail"><label>Agreement Type</label><select class="select" style="width:100%"><option>MSA</option><option>SOW</option><option>NDA</option><option>SLA</option><option>Contract</option></select></div>
- <div class="detail"><label>Agreement Number</label><input class="input" style="width:100%" placeholder="e.g. MSA-2026-045"></div>
- <div class="detail"><label>Agreement Start Date</label><input class="input" style="width:100%" type="date"></div>
- <div class="detail"><label>Contract End Date</label><input class="input" style="width:100%" type="date"></div>
- <div class="detail"><label>Responsible Department</label><select class="select" style="width:100%"><option>Operations</option><option>Legal</option><option>Projects</option><option>Finance</option><option>Customer Success</option></select></div>
- <div class="detail"><label>Agreement Owner</label><select class="select" style="width:100%"><option>Select employee...</option><option>A. Menon</option><option>R. Nair</option><option>S. Thomas</option></select></div>
- <div class="detail"><label>Client Contact</label><input class="input" style="width:100%" placeholder="Contact name"></div>
- <div class="detail"><label>Agreement Document</label><input class="input" style="width:100%" type="file"></div>
- </div>
- <div style="margin-top:20px;padding:15px;background:#f7f9fc;border-radius:10px"><strong style="font-size:13px">Automatic Reminders</strong><p style="font-size:12px;color:#6b7280">System will notify the responsible department at 90, 60, 30, 15 and 7 days before expiry. Client reminders can be sent by the agreement owner.</p></div>
- <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveAgreement()">Create Agreement</button></div>`;
- document.getElementById('overlay').style.display='block';
+function filterClients(){let q=document.getElementById('clientSearch').value.toLowerCase();document.getElementById('clientGrid').innerHTML=clients.filter(c=>(c.name+c.code+c.contact+c.industry).toLowerCase().includes(q)).map(clientCard).join('')}
+function renderAgreements(){
+document.getElementById('main').innerHTML=header("Agreements","Every agreement is linked to a client and tracked through its lifecycle.",`<button class="btn" onclick="showPage('clients')">View Clients</button><button class="btn primary" onclick="openAgreement()">＋ Add Agreement</button>`) +
+`<section class="panel"><div class="panel-head"><div class="panel-title">Agreement Register</div><div class="filters"><input id="agrSearch" class="input search" placeholder="Search client or agreement..." oninput="filterAgreements()"><select id="agrType" class="select" onchange="filterAgreements()"><option value="">All Types</option><option>MSA</option><option>SOW</option><option>NDA</option><option>SLA</option><option>Contract</option></select></div></div><div class="table-wrap"><table><thead><tr><th>Client / Agreement</th><th>Type</th><th>Agreement Date</th><th>Contract Ending</th><th>Department / Owner</th><th>Status</th><th>Action</th></tr></thead><tbody id="agrBody"></tbody></table></div></section>`;
+filterAgreements();
 }
-function saveAgreement(){closeModal();showToast('Agreement created successfully');}
-function sendReminder(client){closeModal();showToast('Client reminder sent to '+client);}
-function closeModal(){document.getElementById('overlay').style.display='none'}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2800)}
-renderTable();renderRenewals();
+function filterAgreements(){
+let q=(document.getElementById('agrSearch')?.value||'').toLowerCase(),t=document.getElementById('agrType')?.value||'';
+let list=agreements.filter(a=>(!q||(clientName(a.client)+a.no+a.type).toLowerCase().includes(q))&&(!t||a.type===t));
+document.getElementById('agrBody').innerHTML=list.map(a=>`<tr><td><div class="client">${clientName(a.client)}</div><div class="sub">${a.no}</div></td><td><span class="badge purple">${a.type}</span></td><td>${a.start}</td><td>${a.end}<div class="sub" style="color:${a.days<=30?'#b77900':'#6b7280'}">${a.days>0?a.days+' days remaining':'Expired'}</div></td><td><div class="owner"><div class="mini">${initials(a.owner)}</div><div>${a.dept}<br><span class="sub">${a.owner}</span></div></div></td><td>${badge(a.status)}</td><td><button class="btn" onclick="showAgreement(${a.id})">View</button></td></tr>`).join('');
+}
+function showClient(id){
+let c=clients.find(x=>x.id===id), list=agreements.filter(a=>a.client===id);
+document.getElementById('modalTitle').textContent=c.name;document.getElementById('modalSub').textContent=c.code+" · Client Profile";
+document.getElementById('modalBody').innerHTML=`<div style="display:flex;gap:16px;align-items:center;margin-bottom:22px"><div class="client-logo" style="width:58px;height:58px;font-size:18px">${initials(c.name)}</div><div><h2 style="margin:0 0 4px;font-size:21px">${c.name}</h2><div class="subtitle">${c.industry} · ${c.dept} · ${badge(c.status)}</div></div></div>
+<div class="detail-grid"><div class="detail"><label>Primary Contact</label><span>${c.contact}</span></div><div class="detail"><label>Email</label><span>${c.email}</span></div><div class="detail"><label>Phone</label><span>${c.phone}</span></div><div class="detail"><label>Account Manager</label><span>${c.manager}</span></div><div class="detail"><label>Department</label><span>${c.dept}</span></div><div class="detail"><label>Client Code</label><span>${c.code}</span></div></div>
+<div class="section-title">About Client</div><div style="padding:14px;border:1px solid var(--line);border-radius:10px;color:#5f6878;font-size:13px;line-height:1.6">${c.description}</div>
+<div class="section-title">Agreements (${list.length}) <button class="btn primary" style="float:right" onclick="closeModal();openAgreement(${c.id})">＋ Add Agreement</button></div>
+<div class="table-wrap"><table style="min-width:700px"><thead><tr><th>Agreement</th><th>Type</th><th>Start</th><th>End</th><th>Status</th><th></th></tr></thead><tbody>${list.map(a=>`<tr><td><strong>${a.no}</strong></td><td><span class="badge purple">${a.type}</span></td><td>${a.start}</td><td>${a.end}<br><span class="sub">${a.days} days remaining</span></td><td>${badge(a.status)}</td><td><button class="btn" onclick="showAgreement(${a.id})">View</button></td></tr>`).join('')}</tbody></table></div>`;
+document.getElementById('overlay').style.display='block';
+}
+function showAgreement(id){
+let a=agreements.find(x=>x.id===id),c=clients.find(x=>x.id===a.client);
+document.getElementById('modalTitle').textContent=c.name+" — "+a.type;document.getElementById('modalSub').textContent=a.no+" · Agreement Details";
+document.getElementById('modalBody').innerHTML=`<div class="detail-grid"><div class="detail"><label>Client</label><span>${c.name}</span></div><div class="detail"><label>Agreement Type</label><span>${a.type}</span></div><div class="detail"><label>Agreement Number</label><span>${a.no}</span></div><div class="detail"><label>Agreement Date</label><span>${a.start}</span></div><div class="detail"><label>Contract Ending Date</label><span>${a.end}</span></div><div class="detail"><label>Status</label><span>${badge(a.status)}</span></div><div class="detail"><label>Responsible Department</label><span>${a.dept}</span></div><div class="detail"><label>Agreement Owner</label><span>${a.owner}</span></div><div class="detail"><label>Client Contact</label><span>${c.contact}</span></div></div>
+<div style="display:flex;gap:9px;margin-top:20px"><button class="btn primary" onclick="sendReminder('${c.name}')">✉ Send Client Reminder</button><button class="btn" onclick="showToast('Renewal workflow started');closeModal()">↻ Start Renewal</button><button class="btn" onclick="showToast('Agreement document download started')">↓ Download</button></div>
+<div class="section-title">Automatic Reminder Schedule</div><div style="padding:14px;background:#f7f9fc;border-radius:10px;font-size:12px;color:#667085">90 days · 60 days · 30 days · 15 days · 7 days before contract end. Notifications go to the responsible department and agreement owner. Client reminders can be sent and logged.</div>
+<div class="section-title">Activity History</div><div class="timeline-item"><div class="dot"></div><div><strong>Agreement created</strong><br><span class="sub">Admin Manager · ${a.start}</span></div></div><div class="timeline-item"><div class="dot"></div><div><strong>Department reminder scheduled</strong><br><span class="sub">System automation</span></div></div><div class="timeline-item"><div class="dot"></div><div><strong>Client follow-up</strong><br><span class="sub">Pending · Owner: ${a.owner}</span></div></div>`;
+document.getElementById('overlay').style.display='block';
+}
+function openClient(){
+document.getElementById('modalTitle').textContent="Add New Client";document.getElementById('modalSub').textContent="Create a client profile before adding agreements";
+document.getElementById('modalBody').innerHTML=`<div class="form-grid">
+<div class="field"><label>Client Name *</label><input id="fName" class="input" placeholder="e.g. TechNova Solutions"></div>
+<div class="field"><label>Client ID / Code</label><input id="fCode" class="input" placeholder="e.g. CL-005"></div>
+<div class="field"><label>Industry</label><input id="fIndustry" class="input" placeholder="e.g. Technology"></div>
+<div class="field"><label>Primary Contact Person *</label><input id="fContact" class="input" placeholder="Contact name"></div>
+<div class="field"><label>Email *</label><input id="fEmail" class="input" type="email" placeholder="contact@company.com"></div>
+<div class="field"><label>Phone Number *</label><input id="fPhone" class="input" placeholder="+91 XXXXX XXXXX"></div>
+<div class="field"><label>Account Manager</label><select id="fManager" class="select"><option>A. Menon</option><option>R. Nair</option><option>S. Thomas</option><option>P. Kumar</option></select></div>
+<div class="field"><label>Responsible Department</label><select id="fDept" class="select"><option>Operations</option><option>Projects</option><option>Legal</option><option>Finance</option><option>Customer Success</option></select></div>
+<div class="field"><label>Status</label><select id="fStatus" class="select"><option>Active</option><option>Inactive</option></select></div>
+<div class="field full"><label>Client Address</label><input id="fAddress" class="input" placeholder="Office / registered address"></div>
+<div class="field full"><label>Short Description About Client</label><textarea id="fDesc" class="textarea" placeholder="Brief description of the client, business relationship, services, or important context..."></textarea></div>
+<div class="field"><label>Client Website</label><input id="fWebsite" class="input" placeholder="https://"></div>
+<div class="field"><label>Alternate Contact</label><input id="fAlt" class="input" placeholder="Optional"></div>
+<div class="field"><label>Client Logo</label><input class="input" type="file"></div>
+</div><div style="display:flex;justify-content:flex-end;gap:9px;margin-top:22px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveClient()">Create Client</button></div>`;
+document.getElementById('overlay').style.display='block';
+}
+function saveClient(){
+let name=document.getElementById('fName').value.trim(),contact=document.getElementById('fContact').value.trim(),email=document.getElementById('fEmail').value.trim(),phone=document.getElementById('fPhone').value.trim();
+if(!name||!contact||!email||!phone){showToast("Please fill the required client fields");return}
+let c={id:Date.now(),name,code:document.getElementById('fCode').value||"CL-"+String(clients.length+1).padStart(3,"0"),contact,email,phone,industry:document.getElementById('fIndustry').value||"Not specified",manager:document.getElementById('fManager').value,dept:document.getElementById('fDept').value,status:document.getElementById('fStatus').value,description:document.getElementById('fDesc').value||"No description added.",agreements:0};
+clients.push(c);closeModal();showToast("Client created successfully");renderClients();
+}
+function openAgreement(clientId=null){
+document.getElementById('modalTitle').textContent="Add New Agreement";document.getElementById('modalSub').textContent="Link an agreement to an existing client";
+document.getElementById('modalBody').innerHTML=`<div class="form-grid">
+<div class="field"><label>Client *</label><select id="aClient" class="select">${clients.map(c=>`<option value="${c.id}" ${c.id===clientId?'selected':''}>${c.name}</option>`).join('')}</select></div>
+<div class="field"><label>Agreement Type *</label><select id="aType" class="select"><option>MSA</option><option>SOW</option><option>NDA</option><option>SLA</option><option>Contract</option><option>Addendum</option><option>Other</option></select></div>
+<div class="field"><label>Agreement Number *</label><input id="aNo" class="input" placeholder="e.g. MSA-2026-045"></div>
+<div class="field"><label>Agreement Date *</label><input id="aStart" class="input" type="date"></div>
+<div class="field"><label>Contract Ending Date *</label><input id="aEnd" class="input" type="date"></div>
+<div class="field"><label>Responsible Department</label><select id="aDept" class="select"><option>Operations</option><option>Projects</option><option>Legal</option><option>Finance</option><option>Customer Success</option></select></div>
+<div class="field"><label>Agreement Owner</label><select id="aOwner" class="select"><option>A. Menon</option><option>R. Nair</option><option>S. Thomas</option><option>P. Kumar</option></select></div>
+<div class="field"><label>Renewal Date</label><input id="aRenew" class="input" type="date"></div>
+<div class="field"><label>Agreement Document</label><input class="input" type="file"></div>
+<div class="field full"><label>Agreement Description / Notes</label><textarea id="aDesc" class="textarea" placeholder="Scope, special terms, renewal notes, etc."></textarea></div>
+</div><div style="margin-top:18px;padding:14px;background:#f7f9fc;border-radius:10px"><strong style="font-size:13px">Reminder Automation</strong><div class="sub" style="margin-top:5px">Automatically notify the responsible department at 90 / 60 / 30 / 15 / 7 days before expiry. Client reminder history will be recorded.</div></div>
+<div style="display:flex;justify-content:flex-end;gap:9px;margin-top:22px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveAgreement()">Create Agreement</button></div>`;
+document.getElementById('overlay').style.display='block';
+}
+function saveAgreement(){
+let cid=Number(document.getElementById('aClient').value),no=document.getElementById('aNo').value.trim(),start=document.getElementById('aStart').value,end=document.getElementById('aEnd').value;
+if(!no||!start||!end){showToast("Please fill the required agreement fields");return}
+let endDate=new Date(end),days=Math.ceil((endDate-new Date())/86400000),status=days<=0?"Expired":days<=30?"Expiring Soon":"Active";
+let a={id:Date.now(),client:cid,no,type:document.getElementById('aType').value,start:formatDate(start),end:formatDate(end),days,dept:document.getElementById('aDept').value,owner:document.getElementById('aOwner').value,status};
+agreements.push(a);let c=clients.find(x=>x.id===cid);c.agreements++;closeModal();showToast("Agreement linked to "+c.name);renderAgreements();
+}
+function formatDate(s){let d=new Date(s+"T00:00:00");return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+function clientName(id){return clients.find(c=>c.id===id)?.name||"Unknown Client"}function initials(s){return s.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}function sendReminder(n){closeModal();showToast("Client reminder sent to "+n)}function closeModal(){document.getElementById('overlay').style.display='none'}function showToast(m){let t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2800)}
+renderDashboard();
 </script>
 </body>
 </html>
