@@ -1,130 +1,2722 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Revenue &amp; Collections Dashboard</title>
-<style>
-:root{--bg:#f4f6f9;--cd:#fff;--tx:#1b2430;--mu:#6b7686;--bd:#dde2ea;--ac:#1f5fbf;--ca:#eef2f8;--ok:#1a8a4a;--bad:#c62f2f;--wn:#b7791f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#12161c;--cd:#1b222c;--tx:#e6ebf2;--mu:#93a0b3;--bd:#2c3644;--ac:#5b9bff;--ca:#232c39}}
-:root[data-theme=dark]{--bg:#12161c;--cd:#1b222c;--tx:#e6ebf2;--mu:#93a0b3;--bd:#2c3644;--ac:#5b9bff;--ca:#232c39}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.4 system-ui,Segoe UI,Arial,sans-serif}
-nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 12px;background:var(--cd);border-bottom:1px solid var(--bd);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
-nav button{border:0;background:none;color:var(--mu);padding:6px 10px;border-radius:6px;cursor:pointer;font:inherit}nav button.on{background:var(--ac);color:#fff}
-main{padding:14px;max-width:1500px;margin:auto}h2{font-size:15px;margin:22px 0 8px}h1{font-size:18px;margin:0 0 4px}
-.sc{overflow-x:auto;background:var(--cd);border:1px solid var(--bd);border-radius:8px;max-height:70vh}
-table{border-collapse:collapse;width:100%}th,td{padding:4px 6px;border-bottom:1px solid var(--bd);white-space:nowrap;text-align:left}
-th{position:sticky;top:0;background:var(--ca);font-size:11px;z-index:1}td.n,th.n{text-align:right}
-td input{width:110px;border:1px solid var(--bd);background:var(--cd);color:var(--tx);padding:3px;border-radius:4px;font:inherit}
-.cc{background:var(--ca);color:var(--mu)}th.cc{color:var(--ac)}
-.kp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.k{background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:10px}.k b{display:block;font-size:17px;margin-top:2px}.k span{color:var(--mu);font-size:11px}
-.fl{display:flex;flex-wrap:wrap;gap:8px;background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:10px}.fl label{display:flex;flex-direction:column;font-size:11px;color:var(--mu)}
-select,input.f,button.b{padding:4px;border:1px solid var(--bd);background:var(--cd);color:var(--tx);border-radius:4px;font:inherit}button.b{cursor:pointer;background:var(--ac);color:#fff;margin:8px 6px 8px 0}
-.red{color:var(--bad);font-weight:600}.grn{color:var(--ok);font-weight:600}.amb{color:var(--wn);font-weight:600}
-.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px}.box{background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:10px}
-.note{color:var(--mu);font-size:12px}details{margin:3px 0}summary{cursor:pointer}svg text{fill:var(--mu);font-size:10px}
-</style></head><body>
-<nav id="nav"></nav><main id="app"></main><div id="dl" hidden></div>
-<script>
-const $=s=>document.querySelector(s),iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),TD=iso(new Date());
-const N=v=>+v||0,D=s=>s?new Date(s.length==7?s+'-01T00:00:00':s+'T00:00:00'):null,esc=s=>String(s??'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-const add=(s,n)=>{const d=D(s);if(!d||s==='')return'';d.setDate(d.getDate()+n);return iso(d)},diff=(a,b)=>Math.round((D(a)-D(b))/864e5);
-const eom=m=>{const d=D(m);return d?iso(new Date(d.getFullYear(),d.getMonth()+1,0)):''};
-const M=v=>v===''||v==null||isNaN(v)?'':Number(v).toLocaleString('en-IN',{maximumFractionDigits:2});
-const uniq=a=>[...new Set(a.filter(Boolean))].sort();
-const K='srd_v1';let DB;try{DB=JSON.parse(localStorage.getItem(K))}catch(e){}DB=DB||{};
-['contract','fte','contractors','clients','exp','rates','team'].forEach(k=>DB[k]=DB[k]||[]);DB.set=DB.set||{mode:'txn',soon:7,end:30};
-const save=()=>{try{localStorage.setItem(K,JSON.stringify(DB))}catch(e){}};
-const cl=n=>DB.clients.find(c=>c.name==n)||{};
-function look(cur,dt){let b=null;DB.rates.forEach(r=>{if(r.cur==cur&&r.act!='No'&&r.eff&&r.eff<=dt&&N(r.rate)&&(!b||r.eff>=b.eff))b=r});return b?N(b.rate):0}
-function R(r,dt){const c=r.cur||'INR';if(c=='INR')return 1;const m=DB.set.mode;return m=='txn'?N(r.rate):look(c,m=='monthly'?eom(dt):TD)}
-const cat=t=>/courier/i.test(t)?'c':/laptop/i.test(t)?'l':/software|licen/i.test(t)?'s':'o';
-const expINR=e=>N(e.amt)*R(e,e.date);
-function norm(kind,r){const x={kind,r,cur:r.cur||'INR',client:r.client,team:r.team,lead:r.lead,rec:r.recruiter,l:0,c:0,s:0,o:0,cc:0};const k=cl(r.client);
- if(kind=='Contract'){x.id=r.id;x.name=r.contractor;x.date=r.bm?r.bm+'-01':'';x.rate=R(r,r.bm);x.fc=N(r.brate)*(r.units===''||r.units==null?1:N(r.units));x.elig=eom(r.bm);
-  DB.exp.forEach(e=>{if(e.cid&&e.cid==r.id&&(e.date||'').slice(0,7)==r.bm)x[cat(e.type)]+=expINR(e)});x.cc=N(r.sal)+N(r.pay);x.cost=x.cc+x.l+x.c+x.s+x.o}
- else{x.id=r.id;x.name=r.cand;x.date=r.doj||'';x.rate=R(r,r.doj);x.fc=N(r.ctc)*N(r.fee)/100;x.ctc=N(r.ctc)*x.rate;x.elig=add(r.doj,N(k.elig));x.exp=add(r.doj,N(k.expd));x.cost=0}
- x.rev=x.fc*x.rate;x.gstamt=x.rev*N(r.gst)/100;x.tot=x.rev+x.gstamt;x.inv=r.invno;x.invd=r.invdate;x.due=x.invd?add(x.invd,N(k.terms)):'';x.paid=N(r.paid);
- x.profit=x.rev-x.cost;x.pct=x.rev?x.profit/x.rev*100:'';x.dd=x.due?diff(x.due,TD):'';x.od=x.dd!==''&&x.dd<0?-x.dd:0;
- x.st=r.ovr?r.ovr:!x.inv?(x.elig&&x.elig<=TD?'Invoice Pending':'Not Invoiced'):(x.paid>=x.tot-.5&&x.tot>0)?'Paid':x.paid>0?(r.paydate?'Short Paid':'Partially Paid'):x.dd!==''&&x.dd<0?'Overdue':x.dd!==''&&x.dd<=DB.set.soon?'Payment Due':'Invoiced';
- x.out=x.inv&&x.st!='Written Off'?x.tot-x.paid:0;x.diff=x.paid>0?x.tot-x.paid:'';
- x.fu=x.st=='Paid'||x.st=='Written Off'?'Paid':!x.inv?'':x.st=='Short Paid'?'Short Paid':x.dd<0?'Overdue':x.dd==0?'Due Today':x.dd<=DB.set.soon?'Due Soon':(r.fud&&r.fud<=TD)?'Follow-Up Required':'';return x}
-const ALL=()=>[...DB.contract.map(r=>norm('Contract',r)),...DB.fte.map(r=>norm('Full-Time',r))];
-const col=(k,l,t='t',s)=>({k,l,t,s}),cal=(k,l,f,fmt)=>({k,l,f,fmt,c:1});
-const CUR=[col('cur','Currency','t','cur'),col('rate','Rate to INR (txn)','n')],FU=[col('fud','Follow-Up Date','d'),col('fus','Follow-Up Status','t','fus'),col('fuo','Follow-Up Owner'),col('ovr','Status Override','t','ovr'),col('notes','Notes')];
-const ORG=[col('recruiter','Recruiter','t','rec'),col('lead','Team Lead','t','leads'),col('team','Team','t','teams'),col('client','Client','t','clients')];
-const INV=[col('invno','Invoice Number'),col('invdate','Invoice Date','d')],PAY=[col('paid','Actual Payment (INR)','n'),col('paydate','Payment Date','d')];
-const SCH={
-contract:{p:'C-',n:'Contract Revenue',k:'Contract',c:[col('id','Contract ID'),col('contractor','Contractor','t','contractors'),...ORG,col('bm','Billing Month','m'),...CUR.slice(0,1),col('brate','Client Billing Rate','n'),col('units','Units (months/days)','n'),CUR[1],cal('fc','Billing FC',x=>x.fc,'n'),cal('rev','Revenue INR (ex-GST)',x=>x.rev,'n'),col('gst','GST %','n'),cal('ga','GST',x=>x.gstamt,'n'),cal('tot','Invoice Total',x=>x.tot,'n'),col('sal','Contractor Payment','n'),col('pay','Employer/Payroll Cost','n'),cal('l','Laptop',x=>x.l,'n'),cal('c','Courier',x=>x.c,'n'),cal('s','Software',x=>x.s,'n'),cal('o','Other Exp',x=>x.o,'n'),cal('cost','Total Cost',x=>x.cost,'n'),cal('pr','Gross Profit',x=>x.profit,'n'),cal('pc','Profit %',x=>x.pct,'n'),...INV,cal('du','Due Date',x=>x.due),...PAY,cal('out','Outstanding',x=>x.out,'n'),cal('st','Status',x=>x.st),...FU]},
-fte:{p:'F-',n:'Full-Time Revenue',k:'Full-Time',c:[col('id','Placement ID'),col('cand','Candidate'),...ORG,col('pos','Position'),col('doj','DOJ','d'),col('ctc','Candidate CTC','n'),col('fee','Fee %','n'),...CUR,cal('fc','Fee FC',x=>x.fc,'n'),cal('rev','Revenue INR (ex-GST)',x=>x.rev,'n'),col('gst','GST %','n'),cal('ga','GST',x=>x.gstamt,'n'),cal('tot','Invoice Total',x=>x.tot,'n'),cal('el','Invoice Eligible',x=>x.elig),...INV,cal('du','Payment Due',x=>x.due),cal('ex','Expected Payment',x=>x.exp),...PAY,cal('out','Outstanding',x=>x.out,'n'),cal('df','Diff from Invoice',x=>x.diff,'n'),cal('st','Status',x=>x.st),col('gar','Guarantee Period'),col('ps','Placement Status','t','pst'),...FU]},
-contractors:{p:'CT-',n:'Contractor Master',c:[col('id','Contractor ID'),col('name','Contractor Name'),col('eid','Employee ID'),...ORG,col('pos','Position'),col('join','Joining Date','d'),col('cs','Contract Start','d'),col('ce','Contract End','d'),col('status','Status','t','cst'),col('uniq','Unique Recruiter','t','yn'),col('brate','Billing Rate','n'),col('cur','Billing Currency','t','cur'),col('sal','Salary/Payment','n'),col('ctype','Contract Type','t','ctype'),col('repl','Replacement/Termination'),col('notes','Notes')]},
-clients:{n:'Client Master',c:[col('name','Client Name'),col('country','Country'),col('cur','Currency','t','cur'),col('bt','Billing Type','t','cur'),col('pt','Client Payout Type','t','pt'),col('eng','Contract/FT/Both','t','eng'),col('terms','Payment Terms (days from invoice)','n'),col('elig','Invoice Eligibility Days','n'),col('expd','Expected Payment Days (from DOJ)','n'),col('gstapp','GST Applicable','t','yn'),col('gst','GST %','n'),col('bc','Billing Contact'),col('fc','Finance Contact'),col('poc','Recruiter POC'),col('team','Team','t','teams'),col('as','Agreement Start','d'),col('ae','Agreement End','d'),col('notes','Notes'),col('act','Active','t','act')]},
-exp:{n:'Expense Tracker',c:[col('date','Expense Date','d'),col('type','Expense Type','t','etype'),col('contractor','Contractor','t','contractors'),col('client','Client','t','clients'),col('team','Team','t','teams'),col('recruiter','Recruiter','t','rec'),col('amt','Amount','n'),...CUR,cal('inr','Amount INR',e=>expINR(e),'n'),col('cid','Related Contract ID','t','cid'),col('notes','Notes')]},
-rates:{n:'Currency Rates',c:[col('cur','Currency','t','cur'),col('rate','INR Rate','n'),col('eff','Effective Date','d'),col('by','Updated By'),col('act','Active','t','act')]},
-team:{n:'Team & Recruiter Master',c:[col('team','Team'),col('lead','Team Lead'),col('recruiter','Recruiter')]}};
-const LS={clients:()=>DB.clients.map(c=>c.name),contractors:()=>DB.contractors.map(c=>c.name),rec:()=>uniq(DB.team.map(t=>t.recruiter)),teams:()=>uniq(DB.team.map(t=>t.team)),leads:()=>uniq(DB.team.map(t=>t.lead)),cur:()=>uniq(['INR','USD','EUR','GBP','AED',...DB.rates.map(r=>r.cur)]),cid:()=>DB.contract.map(r=>r.id),
-etype:()=>['Laptop Purchase','Laptop Courier','Software','License','Equipment','Recruitment Cost','Contractor-related','Client-specific','Other'],fus:()=>['Not Started','Called','Emailed','Promised','Escalated','Closed'],ovr:()=>['','Disputed','Written Off'],pst:()=>['Placed','Replaced','Dropped','Guarantee Completed'],yn:()=>['Yes','No'],act:()=>['Active','Inactive','Yes','No'],cst:()=>['Active','Ended','Terminated'],pt:()=>['Monthly Contract Billing','Percentage of CTC','Fixed Placement Fee','Other'],eng:()=>['Contract','Full-Time','Both'],ctype:()=>['Payroll','Third-party','Other']};
-const FILL={contract(r,k){if(k=='contractor'){const c=DB.contractors.find(c=>c.name==r.contractor);if(c){r.recruiter=c.recruiter;r.lead=c.lead;r.team=c.team;r.client=c.client;r.brate=c.brate;r.cur=c.cur;r.sal=c.sal;k='client'}}
- if(k=='client'){const c=cl(r.client);r.cur=r.cur||c.cur;r.gst=c.gstapp=='Yes'?c.gst:0;r.team=r.team||c.team}
- if(['client','cur','bm','contractor'].includes(k)&&(r.cur||'INR')!='INR')r.rate=look(r.cur,eom(r.bm)||TD)||r.rate||''},
- fte(r,k){if(k=='client'){const c=cl(r.client);r.cur=c.cur||r.cur;r.gst=c.gstapp=='Yes'?c.gst:0;r.team=r.team||c.team}
- if(['client','cur','doj'].includes(k)&&(r.cur||'INR')!='INR')r.rate=look(r.cur,r.doj||TD)||r.rate||''},
- exp(r,k){if(k=='contractor'){const c=DB.contractors.find(c=>c.name==r.contractor);if(c){r.client=c.client;r.team=c.team;r.recruiter=c.recruiter}}if((r.cur||'INR')!='INR'&&!r.rate)r.rate=look(r.cur,r.date||TD)||''},
- team(){}};
-const X={contract:r=>norm('Contract',r),fte:r=>norm('Full-Time',r),exp:r=>r};
-const fv=(v,f)=>f=='n'?M(v):v??'';const sc=v=>/Overdue|Short|Disputed|Pending/.test(v)?'red':/Paid|Closed/.test(v)&&!/Short|Partially/.test(v)?'grn':/Partial|Due/.test(v)?'amb':'';
-function cellCalc(c,x){const v=c.f(x);return`<td class="cc ${c.fmt=='n'?'n ':''}${c.k=='st'?sc(v):''}" data-k="${c.k}">${fv(v,c.fmt)}</td>`}
-function grid(tab){const S=SCH[tab],rows=DB[tab],hc=S.c.some(c=>c.c);
- return`<div class=sc data-tab="${tab}"><table><thead><tr>${S.c.map(c=>`<th class="${c.c?'cc':''}">${c.l}</th>`).join('')}<th></th></tr></thead><tbody>${rows.map((r,i)=>{const x=hc?X[tab](r):0;return`<tr data-i="${i}">${S.c.map(c=>c.c?cellCalc(c,x):`<td><input data-k="${c.k}" type="${{d:'date',m:'month',n:'number'}[c.t]||'text'}" ${c.t=='n'?'step=any':''} ${c.s?`list="dl_${c.s}"`:''} value="${esc(r[c.k])}"></td>`).join('')}<td><button onclick="del('${tab}',${i})">✕</button></td></tr>`}).join('')}</tbody></table></div>`}
-function view(tab){const S=SCH[tab];return`<h1>${S.n}</h1><p class=note>White cells = manual entry. Grey cells = automatic formulas. Saved in this browser.</p><button class=b onclick="addRow('${tab}')">+ Add row</button>${grid(tab)}`}
-function addRow(tab){const S=SCH[tab],r={};if(S.p){let n=DB[tab].length+1;while(DB[tab].some(o=>o.id==S.p+String(n).padStart(3,'0')))n++;r.id=S.p+String(n).padStart(3,'0')}DB[tab].push(r);save();show(cur)}
-function del(tab,i){if(confirm('Delete this row?')){DB[tab].splice(i,1);save();show(cur)}}
-function dls(){$('#dl').innerHTML=Object.keys(LS).map(k=>`<datalist id="dl_${k}">${LS[k]().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`).join('')}
-$('#app').addEventListener('change',e=>{const i=e.target,tr=i.closest('tr'),box=i.closest('[data-tab]');if(!box||!i.dataset.k)return;const tab=box.dataset.tab,r=DB[tab][tr.dataset.i];r[i.dataset.k]=i.value;FILL[tab]?.(r,i.dataset.k);save();dls();
- const S=SCH[tab],x=S.c.some(c=>c.c)?X[tab](r):0;S.c.forEach(c=>{const el=tr.querySelector(`[data-k="${c.k}"]`);if(!el)return;if(c.c){const v=c.f(x);el.textContent=fv(v,c.fmt);if(c.k=='st')el.className='cc '+sc(v)}else if(el!==document.activeElement)el.value=r[c.k]??''})});
-function ro(head,rows){return`<div class=sc><table><thead><tr>${head.map(h=>`<th>${h[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(x=>`<tr>${head.map(h=>{const v=h[1](x);return`<td class="${h[2]=='n'?'n':''} ${h[2]=='s'?sc(v):''}">${h[2]=='n'?M(v):esc(v)}</td>`}).join('')}</tr>`).join('')||'<tr><td>No records yet.</td></tr>'}</tbody></table></div>`}
-const invHead=[['Invoice ID',x=>x.id],['Invoice No',x=>x.inv],['Type',x=>x.kind],['Contractor/Candidate',x=>x.name],['Client',x=>x.client],['Team',x=>x.team],['Recruiter',x=>x.rec],['Invoice Date',x=>x.invd],['Due Date',x=>x.due],['Revenue ex-GST',x=>x.rev,'n'],['GST',x=>x.gstamt,'n'],['Invoice Total',x=>x.tot,'n'],['Cur',x=>x.cur],['INR Rate',x=>x.rate,'n'],['Invoice Value INR',x=>x.tot,'n'],['Expected Pmt',x=>x.exp||x.due],['Actual Payment',x=>x.paid,'n'],['Payment Date',x=>x.r.paydate],['Pmt Difference',x=>x.diff,'n'],['Outstanding',x=>x.out,'n'],['Status',x=>x.st,'s'],['Follow-Up Date',x=>x.r.fud],['Days Overdue',x=>x.od],['FU Status',x=>x.r.fus],['FU Owner',x=>x.r.fuo],['Remarks',x=>x.r.notes]];
-const fuHead=[['Client',x=>x.client],['Invoice No',x=>x.inv],['Invoice Date',x=>x.invd],['Due Date',x=>x.due],['Expected',x=>x.tot,'n'],['Actual',x=>x.paid,'n'],['Outstanding',x=>x.out,'n'],['Days Until Due',x=>x.dd],['Days Overdue',x=>x.od],['Category',x=>x.fu,'s'],['Follow-Up Date',x=>x.r.fud],['Owner',x=>x.r.fuo],['FU Status',x=>x.r.fus],['Last/Next Follow-Up',x=>x.r.fud],['Remarks',x=>x.r.notes]];
-const FL={p:'all',from:'',to:'',team:'',lead:'',rec:'',client:'',type:'',cur:''};
-function rng(){const n=new Date(),y=n.getFullYear(),m=n.getMonth(),q=Math.floor(m/3),f=(a,b)=>[iso(a),iso(b)];switch(FL.p){case'mtd':return f(new Date(y,m,1),new Date(y,m+1,0));case'pm':return f(new Date(y,m-1,1),new Date(y,m,0));case'q':return f(new Date(y,q*3,1),new Date(y,q*3+3,0));case'y':return[y+'-01-01',y+'-12-31'];case'py':return[y-1+'-01-01',y-1+'-12-31'];case'c':return[FL.from,FL.to||'9999'];}return['','9999']}
-function G(T,E,kx,ke){const g={};const o=k=>g[k]=g[k]||{c:0,f:0,cost:0,inv:0,col:0,out:0};T.forEach(x=>{const a=o(kx(x));a[x.kind=='Contract'?'c':'f']+=x.rev;a.cost+=x.cc;a.inv+=x.inv?x.tot:0;a.col+=x.paid;a.out+=x.out});E.forEach(e=>{o(ke(e)).cost+=e.v});return Object.entries(g).filter(e=>e[0]).sort((a,b)=>a[0]<b[0]?-1:1)}
-function gt(L,h){return`<div class=sc><table><thead><tr>${h.map(x=>`<th class="${x!=h[0]?'n':''}">${x}</th>`).join('')}</tr></thead><tbody>${L.map(([k,a])=>{const rv=a.c+a.f,p=rv-a.cost;return`<tr><td>${esc(k)}</td>${[a.c,a.f,rv,a.cost,p].map(v=>`<td class=n>${M(v)}</td>`).join('')}<td class=n>${rv?M(p/rv*100)+'%':''}</td>${[a.inv,a.col,a.out].map(v=>`<td class=n>${M(v)}</td>`).join('')}</tr>`}).join('')||'<tr><td>No data</td></tr>'}</tbody></table></div>`}
-function bars(ms,ser,stack){const W=Math.max(420,ms.length*(stack?38:26*ser.length+14)),H=200,mx=Math.max(1,...ms.map((_,i)=>stack?ser.reduce((s,a)=>s+Math.max(0,a.v[i]),0):Math.max(...ser.map(a=>a.v[i])))),bw=stack?24:22;let s=`<div class=sc style="max-height:none"><svg width=${W} height=${H+34}>`;
- ms.forEach((m,i)=>{let x0=i*(W/ms.length)+8,y=H;ser.forEach((a,j)=>{const h=Math.max(0,a.v[i])/mx*(H-10);if(stack){y-=h;s+=`<rect x=${x0} y=${y} width=${bw} height=${h} fill="${a.c}"><title>${a.n} ${M(a.v[i])}</title></rect>`}else s+=`<rect x=${x0+j*(bw/ser.length*1.1)} y=${H-h} width=${bw/ser.length*1.05} height=${h} fill="${a.c}"><title>${a.n} ${M(a.v[i])}</title></rect>`});s+=`<text x=${x0} y=${H+14}>${m.slice(2)}</text>`});
- return s+`</svg></div><span class=note>${ser.map(a=>`<b style="color:${a.c}">■</b> ${a.n}`).join(' &nbsp; ')}</span>`}
-const kc=(l,v,c='')=>`<div class=k><span>${l}</span><b class="${c}">${v}</b></div>`;
-function dash(){const[a,b]=rng(),f=FL,ok=(o,dt)=>(!a||dt>=a)&&dt<=b&&(!f.team||o.team==f.team)&&(!f.client||o.client==f.client)&&(!f.cur||(o.cur||'INR')==f.cur);
- const T=ALL().filter(x=>ok(x,x.date)&&(!f.lead||x.lead==f.lead)&&(!f.rec||x.rec==f.rec)&&(!f.type||x.kind==f.type));
- const E=f.type=='Full-Time'||f.lead?[]:DB.exp.filter(e=>ok(e,e.date||'')&&(!f.rec||e.recruiter==f.rec)).map(e=>({...e,v:expINR(e)}));
- const S=(L,g)=>L.reduce((s,x)=>s+N(g(x)),0),C=T.filter(x=>x.kind=='Contract'),F=T.filter(x=>x.kind=='Full-Time');
- const rev=S(T,x=>x.rev),cr=S(C,x=>x.rev),fr=S(F,x=>x.rev),gst=S(T,x=>x.gstamt),iv=S(T,x=>x.inv?x.tot:0),col=S(T,x=>x.paid),out=S(T,x=>x.out),cc=S(T,x=>x.cc),ex=S(E,e=>e.v),cost=cc+ex,pf=rev-cost,ov=S(T.filter(x=>x.st=='Overdue'),x=>x.out),sh=S(T.filter(x=>x.st=='Short Paid'),x=>x.out);
- const act=DB.contractors.filter(c=>c.status=='Active'&&(!f.team||c.team==f.team)&&(!f.client||c.client==f.client)),nm=uniq(C.map(x=>x.name)).length||1;
- const sel=(k,l,o)=>`<label>${l}<select onchange="FL.${k}=this.value;show('Dashboard')"><option value="">All</option>${o.map(v=>`<option ${FL[k]==v?'selected':''}>${esc(v)}</option>`).join('')}</select></label>`;
- const ms=uniq([...T.map(x=>x.date.slice(0,7)),...E.map(e=>(e.date||'').slice(0,7))]),MG=G(T,E,x=>x.date.slice(0,7),e=>(e.date||'').slice(0,7)),mv=k=>ms.map(m=>{const r=MG.find(z=>z[0]==m);return r?r[1][k]:0});
- const H=['Contract Rev','FTE Rev','Total Rev','Cost','Profit','Profit %','Invoiced','Collected','Outstanding'];
- const q=d=>d?d.slice(0,4)+'-Q'+Math.ceil(+d.slice(5,7)/3):'';
- const A=[['Invoices due today',T.filter(x=>x.inv&&x.dd===0&&x.out>0)],['Due within '+DB.set.soon+' days',T.filter(x=>x.inv&&x.dd>0&&x.dd<=DB.set.soon&&x.out>0)],['Overdue invoices',T.filter(x=>x.st=='Overdue')],['Short-paid',T.filter(x=>x.st=='Short Paid')],['Partially paid',T.filter(x=>x.st=='Partially Paid')],['Invoice pending',T.filter(x=>x.kind=='Contract'&&!x.inv&&x.elig&&x.elig<=TD)],['Invoice eligible not raised (FTE)',T.filter(x=>x.kind=='Full-Time'&&!x.inv&&x.elig&&x.elig<=TD)],['Missing invoice number',T.filter(x=>x.invd&&!x.inv)],['Missing payment date',T.filter(x=>x.paid>0&&!x.r.paydate)],
- ['Contracts ending ≤'+DB.set.end+' days',DB.contractors.filter(c=>c.status=='Active'&&c.ce&&diff(c.ce,TD)<=DB.set.end&&diff(c.ce,TD)>=0).map(c=>({id:c.name}))],['Contractors missing billing info',DB.contractors.filter(c=>!N(c.brate)||!c.cur||!N(c.sal)).map(c=>({id:c.name}))],['Missing currency rate',T.filter(x=>x.cur!='INR'&&!x.rate)],['Missing team/recruiter',T.filter(x=>!x.team||!x.rec)],['Expenses not linked to contractor/client',DB.exp.filter(e=>!e.contractor&&!e.client).map(e=>({id:(e.type||'Expense')+' '+(e.date||'')}))]];
- const fuL=T.filter(x=>x.fu&&x.fu!='Paid'&&x.out>0);
- return`<h1>Management Dashboard</h1><p class=note>Revenue = before GST. Profit never uses GST. Period filter applies to billing month (Contract) / DOJ (Full-Time) / expense date.</p>
- <div class=fl><label>Period<select onchange="FL.p=this.value;show('Dashboard')">${[['all','All time'],['mtd','Current Month'],['pm','Previous Month'],['q','Current Quarter'],['y','Current Year'],['py','Previous Year'],['c','Custom Range']].map(o=>`<option value=${o[0]} ${FL.p==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></label>${FL.p=='c'?`<label>From<input class=f type=date value="${FL.from}" onchange="FL.from=this.value;show('Dashboard')"></label><label>To<input class=f type=date value="${FL.to}" onchange="FL.to=this.value;show('Dashboard')"></label>`:''}${sel('team','Team',LS.teams())}${sel('lead','Team Lead',LS.leads())}${sel('rec','Recruiter',LS.rec())}${sel('client','Client',LS.clients())}${sel('type','Revenue Type',['Contract','Full-Time'])}${sel('cur','Currency',LS.cur())}</div>
- <h2>Key Numbers</h2><div class=kp>${kc('Total Revenue (ex-GST)','₹'+M(rev))}${kc('Contract Revenue','₹'+M(cr))}${kc('FTE Revenue','₹'+M(fr))}${kc('Total Profit','₹'+M(pf),pf<0?'red':'grn')}${kc('Profit %',rev?M(pf/rev*100)+'%':'–')}${kc('GST Billed','₹'+M(gst))}${kc('Invoiced (incl. GST)','₹'+M(iv))}${kc('Collected','₹'+M(col),'grn')}${kc('Outstanding','₹'+M(out),out?'amb':'')}${kc('Overdue','₹'+M(ov),ov?'red':'')}${kc('Short Payments','₹'+M(sh),sh?'red':'')}${kc('Contractor Cost','₹'+M(cc))}${kc('Expenses','₹'+M(ex))}${kc('Active Contractors',act.length)}${kc('FT Placements',F.length)}</div>
- <h2>Monthly Revenue Trend — Contract vs FTE</h2>${bars(ms,[{n:'Contract',c:'#1f5fbf',v:mv('c')},{n:'FTE',c:'#e08a1e',v:mv('f')}],1)}
- <h2>Profitability — Revenue vs Cost vs Profit</h2>${bars(ms,[{n:'Revenue',c:'#1f5fbf',v:ms.map((m,i)=>mv('c')[i]+mv('f')[i])},{n:'Cost',c:'#c62f2f',v:mv('cost')},{n:'Profit',c:'#1a8a4a',v:ms.map((m,i)=>mv('c')[i]+mv('f')[i]-mv('cost')[i])}])}
- <h2>Team Performance</h2>${gt(G(T,E,x=>x.team||'(no team)',e=>e.team||'(no team)'),['Team',...H])}
- <h2>Client Performance / Profitability</h2>${gt(G(T,E,x=>x.client||'(no client)',e=>e.client||'(no client)'),['Client',...H])}
- <h2>Action Required</h2><div class=box>${A.map(([l,L])=>`<details><summary class="${L.length?'red':''}">${l}: <b>${L.length}</b></summary><span class=note>${L.map(x=>esc(x.id||x.name)).join(', ')}</span></details>`).join('')}</div>
- <h2>Receivables &amp; Follow-Ups (${fuL.length})</h2>${ro(fuHead,fuL)}
- <h2>Contract Staffing</h2><div class=kp>${kc('Active Contractors',act.length)}${kc('Billing (ex-GST)','₹'+M(cr))}${kc('Contractor Cost','₹'+M(S(C,x=>x.cc)))}${kc('Additional Expenses','₹'+M(S(C,x=>x.cost-x.cc)+E.filter(e=>!e.cid).reduce((s,e)=>s+e.v,0)))}${kc('Margin','₹'+M(cr-S(C,x=>x.cost)))}${kc('Revenue / Contractor','₹'+M(cr/nm))}${kc('Profit / Contractor','₹'+M((cr-S(C,x=>x.cost))/nm))}${kc('Outstanding','₹'+M(S(C,x=>x.out)))}</div>
- <h2>Full-Time Engagement</h2><div class=kp>${kc('Placements',F.length)}${kc('Total CTC','₹'+M(S(F,x=>x.ctc)))}${kc('Revenue','₹'+M(fr))}${kc('GST','₹'+M(S(F,x=>x.gstamt)))}${kc('Invoiced','₹'+M(S(F,x=>x.inv?x.tot:0)))}${kc('Collected','₹'+M(S(F,x=>x.paid)))}${kc('Outstanding','₹'+M(S(F,x=>x.out)))}${kc('Avg Fee %',F.length?M(S(F,x=>x.r.fee)/F.length)+'%':'–')}</div>
- <p><b>Cycle:</b> DOJ (${F.length}) → Invoice Eligible (${F.filter(x=>x.elig&&x.elig<=TD).length}) → Invoice Raised (${F.filter(x=>x.inv).length}) → Payment Due (${F.filter(x=>x.inv&&x.out>0).length}) → Payment Received (${F.filter(x=>x.paid>0).length})</p>
- <h2>Monthly Analysis</h2>${gt(MG,['Month',...H])}<h2>Quarterly</h2>${gt(G(T,E,x=>q(x.date),e=>q(e.date||'')),['Quarter',...H])}<h2>Annual</h2>${gt(G(T,E,x=>x.date.slice(0,4),e=>(e.date||'').slice(0,4)),['Year',...H])}`}
-function sets(){const s=DB.set;return`<h1>Lists / Settings</h1><div class=box><p><b>Currency rate method</b> <select onchange="DB.set.mode=this.value;save()"><option value=txn ${s.mode=='txn'?'selected':''}>Transaction-specific (rate stored on each row)</option><option value=monthly ${s.mode=='monthly'?'selected':''}>Monthly (latest rate effective by month-end)</option><option value=current ${s.mode=='current'?'selected':''}>Current rate</option></select></p>
-<p>"Due soon" days <input class=f type=number value=${s.soon} onchange="DB.set.soon=+this.value;save()"> &nbsp; Contract-ending warning days <input class=f type=number value=${s.end} onchange="DB.set.end=+this.value;save()"></p>
-<p class=note>Invoice eligibility days (e.g. 60 from DOJ), expected payment days (e.g. 90) and payment terms are set per client in Client Master. Add new rates as new dated rows in Currency Rates — old rows are kept, so history is never overwritten. Transaction mode stores the rate on the row when you pick the client/currency.</p>
-<button class=b onclick="exp_()">Export backup</button><label class=b style="display:inline-block">Import backup<input type=file hidden accept=.json onchange="imp(this.files[0])"></label><button class=b style="background:var(--bad)" onclick="if(confirm('Erase ALL data?')){localStorage.removeItem(K);DB=null;location.reload()}">Erase all</button></div>`}
-function exp_(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)],{type:'application/json'}));a.download='revenue-backup.json';a.click()}
-function imp(f){const r=new FileReader();r.onload=()=>{try{DB=JSON.parse(r.result);save();location.reload()}catch(e){alert('Invalid file')}};r.readAsText(f)}
-const TABS=[['Dashboard'],['contract'],['fte'],['contractors'],['clients'],['Invoice & Collections'],['exp'],['rates'],['team'],['Follow-Up Tracker'],['Settings']];let cur='Dashboard';
-const tn=t=>SCH[t]?.n||t;
-function show(t){cur=t;$('#nav').innerHTML=TABS.map(([k])=>`<button class="${k==t?'on':''}" onclick="show('${k}')">${tn(k)}</button>`).join('');dls();const A=ALL();
- $('#app').innerHTML=t=='Dashboard'?dash():SCH[t]?view(t):t=='Settings'?sets():t=='Invoice & Collections'?`<h1>${t}</h1><p class=note>Auto-built from invoice numbers entered in Contract / Full-Time rows.</p>${ro(invHead,A.filter(x=>x.inv))}`:`<h1>${t}</h1><p class=note>Auto-generated. Update follow-up date/status/owner in the source Contract or Full-Time row.</p>${ro(fuHead,A.filter(x=>x.fu&&x.fu!='Paid'||x.st=='Paid'&&x.inv&&0))}`}
-show('Dashboard');
-</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staffing & Recruitment Revenue, Profitability & Invoice Hub</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #1e293b;
+      --primary-light: #334155;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --warning: #d97706;
+      --warning-bg: #fef3c7;
+      --info: #0284c7;
+      --info-bg: #e0f2fe;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+
+    /* Sidebar Navigation */
+    aside { width: 250px; background: var(--primary); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+    .brand { padding: 20px 16px; font-size: 16px; font-weight: 700; border-bottom: 1px solid var(--primary-light); display: flex; align-items: center; gap: 10px; }
+    .nav-list { list-style: none; overflow-y: auto; flex: 1; padding: 10px 0; }
+    .nav-item { padding: 10px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; color: #cbd5e1; transition: 0.2s; font-weight: 500; }
+    .nav-item:hover, .nav-item.active { background: var(--primary-light); color: #fff; }
+    .nav-item.active { border-left: 4px solid var(--accent); }
+
+    /* Content Area */
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    header { background: var(--surface); padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .page-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .global-actions { display: flex; gap: 10px; }
+
+    .content-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* UI Controls & Buttons */
+    .btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-outline { background: transparent; border-color: var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--bg); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+
+    /* Card Panels */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .card-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text); display: flex; justify-content: space-between; align-items: center; }
+
+    /* Metric Grid (KPIs) */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; position: relative; }
+    .kpi-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 8px 0 0 8px; background: var(--accent); }
+    .kpi-card.success::before { background: var(--success); }
+    .kpi-card.danger::before { background: var(--danger); }
+    .kpi-card.warning::before { background: var(--warning); }
+    .kpi-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; }
+    .kpi-val { font-size: 20px; font-weight: 700; color: var(--text); }
+    .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Filters Bar */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 12px; background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; align-items: center; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+    .filter-group select, .filter-group input { padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; background: #fff; outline: none; }
+
+    /* Data Tables */
+    .table-container { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; min-width: 1000px; }
+    thead th { background: #f1f5f9; padding: 10px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+    tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); white-space: nowrap; }
+    tbody tr:hover { background: #f8fafc; }
+    
+    /* Cell Formats */
+    .calc-cell { background: #f8fafc; font-weight: 600; color: #1e293b; }
+    .num { text-align: right; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-danger { background: var(--danger-bg); color: var(--danger); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning); }
+    .badge-info { background: var(--info-bg); color: var(--info); }
+
+    /* Modal Forms */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #fff; width: 900px; max-width: 95%; max-height: 90vh; border-radius: 8px; overflow-y: auto; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.col-span-2 { grid-column: span 2; }
+    .form-group.col-span-3 { grid-column: span 3; }
+    .form-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group select, .form-group textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; outline: none; }
+    .form-group input:read-only { background: #f1f5f9; cursor: not-allowed; }
+    .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+    /* Charts Area */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .chart-box { height: 280px; position: relative; }
+
+    /* Alerts Box */
+    .alert-panel { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--warning); padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; }
+    .alert-tags { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .alert-chip { font-size: 11px; background: #fff; border: 1px solid var(--border); padding: 4px 10px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+    .alert-chip.alert-danger { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+    .alert-chip.alert-warning { border-color: var(--warning); color: var(--warning); background: var(--warning-bg); }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside>
+    <div class="brand">
+      <i class="fa-solid fa-chart-line text-blue-500"></i>
+      <span>StaffingOps Hub</span>
+    </div>
+    <ul class="nav-list">
+      <li class="nav-item active" onclick="switchTab('dashboard')"><i class="fa-solid fa-gauge-high"></i> Dashboard</li>
+      <li class="nav-item" onclick="switchTab('contract')"><i class="fa-solid fa-file-signature"></i> Contract Revenue</li>
+      <li class="nav-item" onclick="switchTab('fulltime')"><i class="fa-solid fa-user-check"></i> Full-Time Revenue</li>
+      <li class="nav-item" onclick="switchTab('contractors')"><i class="fa-solid fa-users"></i> Contractor Master</li>
+      <li class="nav-item" onclick="switchTab('clients')"><i class="fa-solid fa-building"></i> Client Master</li>
+      <li class="nav-item" onclick="switchTab('invoices')"><i class="fa-solid fa-file-invoice-dollar"></i> Invoices & Collections</li>
+      <li class="nav-item" onclick="switchTab('expenses')"><i class="fa-solid fa-receipt"></i> Expense Tracker</li>
+      <li class="nav-item" onclick="switchTab('currency')"><i class="fa-solid fa-coins"></i> Currency Rates</li>
+      <li class="nav-item" onclick="switchTab('teams')"><i class="fa-solid fa-sitemap"></i> Team & Recruiters</li>
+      <li class="nav-item" onclick="switchTab('followups')"><i class="fa-solid fa-clock-rotate-left"></i> Follow-Up Tracker</li>
+      <li class="nav-item" onclick="switchTab('settings')"><i class="fa-solid fa-sliders"></i> Lists / Settings</li>
+    </ul>
+  </aside>
+
+  <!-- Main Application Body -->
+  <main>
+    <header>
+      <div class="page-title" id="page-header-title">Executive Management Dashboard</div>
+      <div class="global-actions">
+        <button class="btn btn-outline" onclick="exportData()"><i class="fa-solid fa-download"></i> Backup Data (JSON)</button>
+        <button class="btn btn-outline" onclick="triggerImport()"><i class="fa-solid fa-upload"></i> Restore Data</button>
+        <input type="file" id="importInput" style="display:none" onchange="importData(event)">
+        <button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash"></i> Reset All Data</button>
+      </div>
+    </header>
+
+    <div class="content-body">
+
+      <!-- 1. DASHBOARD TAB -->
+      <div id="tab-dashboard" class="tab-content active">
+        <!-- Interactive Multi-Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Period Preset</label>
+            <select id="filt-period" onchange="applyFilters()">
+              <option value="ALL">All Time</option>
+              <option value="THIS_MONTH">Current Month</option>
+              <option value="LAST_MONTH">Previous Month</option>
+              <option value="THIS_QUARTER">Current Quarter</option>
+              <option value="THIS_YEAR">Current Year</option>
+              <option value="CUSTOM">Custom Date Range</option>
+            </select>
+          </div>
+          <div class="filter-group" id="custom-range" style="display:none;">
+            <label>Date Range</label>
+            <div style="display:flex; gap:6px;">
+              <input type="date" id="filt-date-from" onchange="applyFilters()">
+              <input type="date" id="filt-date-to" onchange="applyFilters()">
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Team</label>
+            <select id="filt-team" onchange="applyFilters()"><option value="ALL">All Teams</option></select>
+          </div>
+          <div class="filter-group">
+            <label>Recruiter</label>
+            <select id="filt-recruiter" onchange="applyFilters()"><option value="ALL">All Recruiters</option></select>
+          </div>
+          <div class="filter-group">
+            <label>Client</label>
+            <select id="filt-client" onchange="applyFilters()"><option value="ALL">All Clients</option></select>
+          </div>
+          <div class="filter-group">
+            <label>Revenue Type</label>
+            <select id="filt-revtype" onchange="applyFilters()">
+              <option value="ALL">All Types</option>
+              <option value="CONTRACT">Contract Staffing</option>
+              <option value="FULLTIME">Full-Time Placement</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Action / Alerts Panel -->
+        <div class="alert-panel" id="alert-container">
+          <strong style="color:var(--text);"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Management Exceptions & Alerts</strong>
+          <div class="alert-tags" id="alert-chips">
+            <span class="alert-chip alert-warning">Checking records...</span>
+          </div>
+        </div>
+
+        <!-- Section 1: Executive KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Base Revenue (Excl. GST)</div>
+            <div class="kpi-val" id="kpi-total-rev">₹0</div>
+            <div class="kpi-sub">Contract: <span id="kpi-contract-rev">₹0</span> | FTE: <span id="kpi-fte-rev">₹0</span></div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Gross Margin / Profit</div>
+            <div class="kpi-val" id="kpi-profit">₹0</div>
+            <div class="kpi-sub">Margin %: <span id="kpi-profit-pct">0.00%</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Operational Costs</div>
+            <div class="kpi-val" id="kpi-total-cost">₹0</div>
+            <div class="kpi-sub">Contractor: <span id="kpi-contractor-cost">₹0</span> | Exp: <span id="kpi-exp-cost">₹0</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Invoiced Value (Incl. GST)</div>
+            <div class="kpi-val" id="kpi-invoiced">₹0</div>
+            <div class="kpi-sub">GST Billed: <span id="kpi-gst-billed">₹0</span></div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Actual Collections</div>
+            <div class="kpi-val" id="kpi-collected">₹0</div>
+            <div class="kpi-sub">Cash received in bank</div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-label">Total Receivables (Outstanding)</div>
+            <div class="kpi-val" id="kpi-outstanding">₹0</div>
+            <div class="kpi-sub">Overdue: <span id="kpi-overdue">₹0</span> | Short: <span id="kpi-shortpaid">₹0</span></div>
+          </div>
+        </div>
+
+        <!-- Section 2: Visual Charts -->
+        <div class="chart-grid">
+          <div class="card">
+            <div class="card-title">Monthly Revenue Trend (Contract vs Full-Time)</div>
+            <div class="chart-box"><canvas id="chartMonthlyRev"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Profitability Analysis (Revenue vs Cost vs Profit)</div>
+            <div class="chart-box"><canvas id="chartProfitability"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Section 3 & 4: Performance Tables -->
+        <div class="card">
+          <div class="card-title">Team Performance Breakdown</div>
+          <div class="table-container">
+            <table id="tbl-dash-team">
+              <thead>
+                <tr>
+                  <th>Team Name</th>
+                  <th class="num">Contract Revenue</th>
+                  <th class="num">FTE Revenue</th>
+                  <th class="num">Total Revenue</th>
+                  <th class="num">Costs/Expenses</th>
+                  <th class="num">Gross Profit</th>
+                  <th class="num">Profit %</th>
+                  <th class="num">Invoiced</th>
+                  <th class="num">Collected</th>
+                  <th class="num">Outstanding</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="10" style="text-align:center;">No records available</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Client Revenue & Receivables Breakdown</div>
+          <div class="table-container">
+            <table id="tbl-dash-client">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th class="num">Contract Rev</th>
+                  <th class="num">FTE Rev</th>
+                  <th class="num">Total Rev (Excl. GST)</th>
+                  <th class="num">Direct Costs</th>
+                  <th class="num">Profit</th>
+                  <th class="num">Profit %</th>
+                  <th class="num">Invoiced (Incl. GST)</th>
+                  <th class="num">Collected</th>
+                  <th class="num">Outstanding</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="10" style="text-align:center;">No records available</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 2. CONTRACT REVENUE TAB -->
+      <div id="tab-contract" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Contract Staffing Revenue Ledger (Monthly Billing & Realized Profitability)</span>
+            <button class="btn btn-primary" onclick="openContractModal()"><i class="fa-solid fa-plus"></i> New Contract Billing Entry</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-contract">
+              <thead>
+                <tr>
+                  <th>Contract ID</th>
+                  <th>Contractor Name</th>
+                  <th>Client</th>
+                  <th>Team</th>
+                  <th>Recruiter</th>
+                  <th>Billing Month</th>
+                  <th>Currency</th>
+                  <th class="num">Billing Rate</th>
+                  <th class="num">Ex. Rate</th>
+                  <th class="num">Revenue (INR)</th>
+                  <th class="num">GST %</th>
+                  <th class="num">Invoice Total</th>
+                  <th class="num">Contractor Pay</th>
+                  <th class="num">Addtl Costs</th>
+                  <th class="num">Total Cost</th>
+                  <th class="num">Gross Profit</th>
+                  <th class="num">Profit %</th>
+                  <th>Invoice No</th>
+                  <th class="num">Paid Amount</th>
+                  <th class="num">Outstanding</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. FULL-TIME ENGAGEMENT TAB -->
+      <div id="tab-fulltime" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Full-Time Placement Revenue & Milestone Tracker</span>
+            <button class="btn btn-primary" onclick="openFTEModal()"><i class="fa-solid fa-plus"></i> New Full-Time Placement</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-fte">
+              <thead>
+                <tr>
+                  <th>Placement ID</th>
+                  <th>Candidate</th>
+                  <th>Client</th>
+                  <th>Team</th>
+                  <th>Recruiter</th>
+                  <th>DOJ</th>
+                  <th class="num">Candidate CTC</th>
+                  <th class="num">Fee %</th>
+                  <th>Currency</th>
+                  <th class="num">Fee (Foreign)</th>
+                  <th class="num">Revenue (INR)</th>
+                  <th class="num">GST %</th>
+                  <th class="num">Invoice Total</th>
+                  <th>Eligible Date</th>
+                  <th>Invoice No</th>
+                  <th>Due Date</th>
+                  <th class="num">Collected</th>
+                  <th class="num">Outstanding</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. CONTRACTOR MASTER TAB -->
+      <div id="tab-contractors" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Contractor Master Directory</span>
+            <button class="btn btn-primary" onclick="openContractorMasterModal()"><i class="fa-solid fa-plus"></i> Add Contractor Profile</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-contractor-master">
+              <thead>
+                <tr>
+                  <th>Contractor ID</th>
+                  <th>Name</th>
+                  <th>Client</th>
+                  <th>Position</th>
+                  <th>Recruiter</th>
+                  <th>Team Lead</th>
+                  <th>Team</th>
+                  <th>Billing Rate</th>
+                  <th>Currency</th>
+                  <th>Contractor Salary</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. CLIENT MASTER TAB -->
+      <div id="tab-clients" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Client Master Directory</span>
+            <button class="btn btn-primary" onclick="openClientMasterModal()"><i class="fa-solid fa-plus"></i> Add Client Master</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-client-master">
+              <thead>
+                <tr>
+                  <th>Client Name</th>
+                  <th>Country</th>
+                  <th>Billing Currency</th>
+                  <th>Payout Type</th>
+                  <th>Type</th>
+                  <th>Invoice Eligibility (Days)</th>
+                  <th>Payment Terms (Days)</th>
+                  <th>GST Applicable</th>
+                  <th>GST Rate</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. INVOICE & COLLECTIONS TAB -->
+      <div id="tab-invoices" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Unified Central Invoicing & Cash Collections Ledger</span>
+          </div>
+          <div class="table-container">
+            <table id="tbl-invoices-all">
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Type</th>
+                  <th>Client</th>
+                  <th>Contractor / Candidate</th>
+                  <th>Invoice Date</th>
+                  <th>Due Date</th>
+                  <th class="num">Base Revenue</th>
+                  <th class="num">GST Billed</th>
+                  <th class="num">Total Invoice</th>
+                  <th class="num">Collected</th>
+                  <th class="num">Payment Diff</th>
+                  <th class="num">Outstanding</th>
+                  <th>Days Overdue</th>
+                  <th>Collection Status</th>
+                  <th>Follow-Up Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. EXPENSE TRACKER TAB -->
+      <div id="tab-expenses" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Operational & Direct Contractor Expense Tracker</span>
+            <button class="btn btn-primary" onclick="openExpenseModal()"><i class="fa-solid fa-plus"></i> Add New Expense</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-expenses">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Contract ID</th>
+                  <th>Contractor</th>
+                  <th>Client</th>
+                  <th>Currency</th>
+                  <th class="num">Amount</th>
+                  <th class="num">Ex. Rate</th>
+                  <th class="num">Amount (INR)</th>
+                  <th>Notes</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. CURRENCY RATES TAB -->
+      <div id="tab-currency" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Currency Conversion Rates (INR Pegged)</span>
+            <button class="btn btn-primary" onclick="openCurrencyModal()"><i class="fa-solid fa-plus"></i> Add / Update Currency Rate</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-currency">
+              <thead>
+                <tr>
+                  <th>Currency Code</th>
+                  <th>INR Rate</th>
+                  <th>Effective Date</th>
+                  <th>Updated By</th>
+                  <th>Active</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. TEAM & RECRUITER MASTER TAB -->
+      <div id="tab-teams" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Team & Recruiter Hierarchy</span>
+            <button class="btn btn-primary" onclick="openTeamModal()"><i class="fa-solid fa-plus"></i> Add Team Member</button>
+          </div>
+          <div class="table-container">
+            <table id="tbl-teams-list">
+              <thead>
+                <tr>
+                  <th>Recruiter Name</th>
+                  <th>Team Lead</th>
+                  <th>Team / Practice</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. FOLLOW-UP TRACKER TAB -->
+      <div id="tab-followups" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Receivables & Follow-Up Workqueue</span>
+          </div>
+          <div class="table-container">
+            <table id="tbl-followups">
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Client</th>
+                  <th>Due Date</th>
+                  <th class="num">Invoice Total</th>
+                  <th class="num">Collected</th>
+                  <th class="num">Outstanding</th>
+                  <th>Days Overdue</th>
+                  <th>Priority Category</th>
+                  <th>Follow-Up Date</th>
+                  <th>Follow-Up Owner</th>
+                  <th>Follow-Up Status</th>
+                  <th>Remarks</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. LISTS / SETTINGS TAB -->
+      <div id="tab-settings" class="tab-content">
+        <div class="card">
+          <div class="card-title">System Configurations & Lookup Values</div>
+          <p style="margin-bottom:12px; color:var(--text-muted);">Manage standard system drop-down categories and business defaults.</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Default GST % for Domestic Invoicing</label>
+              <input type="number" id="cfg-gst-default" value="18" onchange="saveConfig()">
+            </div>
+            <div class="form-group">
+              <label>Currency Conversion Policy</label>
+              <select id="cfg-forex-policy" onchange="saveConfig()">
+                <option value="TRANSACTION">Transaction-Specific Rate (Locked on Creation)</option>
+                <option value="CURRENT">Current Master Rate</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL: ADD / EDIT CONTRACT REVENUE ENTRY -->
+  <div class="modal-overlay" id="modal-contract">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="contract-modal-title">Contract Billing & Revenue Entry</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-contract')"></i>
+      </div>
+      <form id="form-contract" onsubmit="saveContract(event)">
+        <input type="hidden" id="contract-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Contractor Profile *</label>
+            <select id="con-contractor-select" required onchange="onContractorSelected(this.value)">
+              <option value="">-- Select Contractor --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Client</label>
+            <input type="text" id="con-client" readonly>
+          </div>
+          <div class="form-group">
+            <label>Position</label>
+            <input type="text" id="con-position" readonly>
+          </div>
+          <div class="form-group">
+            <label>Team</label>
+            <input type="text" id="con-team" readonly>
+          </div>
+          <div class="form-group">
+            <label>Team Lead</label>
+            <input type="text" id="con-tl" readonly>
+          </div>
+          <div class="form-group">
+            <label>Recruiter</label>
+            <input type="text" id="con-recruiter" readonly>
+          </div>
+          <div class="form-group">
+            <label>Billing Month *</label>
+            <input type="month" id="con-month" required>
+          </div>
+          <div class="form-group">
+            <label>Period Start Date</label>
+            <input type="date" id="con-period-start">
+          </div>
+          <div class="form-group">
+            <label>Period End Date</label>
+            <input type="date" id="con-period-end">
+          </div>
+          <div class="form-group">
+            <label>Billing Currency</label>
+            <input type="text" id="con-curr" readonly>
+          </div>
+          <div class="form-group">
+            <label>Client Billing Rate (Foreign/Local) *</label>
+            <input type="number" step="0.01" id="con-billrate" required oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Currency Ex. Rate to INR *</label>
+            <input type="number" step="0.0001" id="con-exrate" required oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Client Revenue (INR) [Excl. GST]</label>
+            <input type="number" id="con-rev-inr" readonly>
+          </div>
+          <div class="form-group">
+            <label>GST %</label>
+            <input type="number" id="con-gst-pct" readonly>
+          </div>
+          <div class="form-group">
+            <label>Invoice Total (INR) [Incl. GST]</label>
+            <input type="number" id="con-inv-total" readonly>
+          </div>
+          <div class="form-group">
+            <label>Contractor Salary / Pay (INR) *</label>
+            <input type="number" step="0.01" id="con-pay" required oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Employer / Payroll Cost (INR)</label>
+            <input type="number" step="0.01" id="con-payroll-cost" value="0" oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Laptop Cost (INR)</label>
+            <input type="number" step="0.01" id="con-laptop-cost" value="0" oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Laptop Courier Cost (INR)</label>
+            <input type="number" step="0.01" id="con-courier-cost" value="0" oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Software & Tools Cost (INR)</label>
+            <input type="number" step="0.01" id="con-software-cost" value="0" oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Other Direct Expenses (INR)</label>
+            <input type="number" step="0.01" id="con-other-cost" value="0" oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Total Operational Cost (INR)</label>
+            <input type="number" id="con-total-cost" readonly>
+          </div>
+          <div class="form-group">
+            <label>Gross Profit (INR)</label>
+            <input type="number" id="con-profit" readonly>
+          </div>
+          <div class="form-group">
+            <label>Gross Profit %</label>
+            <input type="text" id="con-profit-pct" readonly>
+          </div>
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="con-inv-no">
+          </div>
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="date" id="con-inv-date">
+          </div>
+          <div class="form-group">
+            <label>Invoice Due Date</label>
+            <input type="date" id="con-due-date">
+          </div>
+          <div class="form-group">
+            <label>Actual Client Payment (INR)</label>
+            <input type="number" step="0.01" id="con-paid" value="0" oninput="calcContractRow()">
+          </div>
+          <div class="form-group">
+            <label>Payment Received Date</label>
+            <input type="date" id="con-pay-date">
+          </div>
+          <div class="form-group">
+            <label>Outstanding Balance (INR)</label>
+            <input type="number" id="con-outstanding" readonly>
+          </div>
+          <div class="form-group">
+            <label>Collection Status</label>
+            <select id="con-collection-status">
+              <option value="Not Invoiced">Not Invoiced</option>
+              <option value="Invoiced">Invoiced</option>
+              <option value="Payment Due">Payment Due</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Paid">Paid</option>
+              <option value="Short Paid">Short Paid</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Disputed">Disputed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Follow-Up Date</label>
+            <input type="date" id="con-fu-date">
+          </div>
+          <div class="form-group col-span-3">
+            <label>Remarks / Notes</label>
+            <textarea id="con-notes" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-contract')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Contract Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT FULL-TIME REVENUE ENTRY -->
+  <div class="modal-overlay" id="modal-fte">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="fte-modal-title">Full-Time Placement Revenue Entry</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-fte')"></i>
+      </div>
+      <form id="form-fte" onsubmit="saveFTE(event)">
+        <input type="hidden" id="fte-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Placement / Candidate Name *</label>
+            <input type="text" id="fte-candidate" required>
+          </div>
+          <div class="form-group">
+            <label>Client *</label>
+            <select id="fte-client-select" required onchange="onFTEClientSelected(this.value)">
+              <option value="">-- Select Client --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Position Title</label>
+            <input type="text" id="fte-position">
+          </div>
+          <div class="form-group">
+            <label>Team</label>
+            <select id="fte-team-select" required onchange="onFTETeamSelected(this.value)">
+              <option value="">-- Select Team --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Team Lead</label>
+            <input type="text" id="fte-tl" readonly>
+          </div>
+          <div class="form-group">
+            <label>Recruiter</label>
+            <select id="fte-recruiter-select" required>
+              <option value="">-- Select Recruiter --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date of Joining (DOJ) *</label>
+            <input type="date" id="fte-doj" required onchange="calcFTEEligibility()">
+          </div>
+          <div class="form-group">
+            <label>Candidate Agreed CTC *</label>
+            <input type="number" step="0.01" id="fte-ctc" required oninput="calcFTERow()">
+          </div>
+          <div class="form-group">
+            <label>Placement Fee % *</label>
+            <input type="number" step="0.01" id="fte-feepct" required oninput="calcFTERow()">
+          </div>
+          <div class="form-group">
+            <label>Currency</label>
+            <input type="text" id="fte-curr" readonly>
+          </div>
+          <div class="form-group">
+            <label>Exchange Rate to INR *</label>
+            <input type="number" step="0.0001" id="fte-exrate" required oninput="calcFTERow()">
+          </div>
+          <div class="form-group">
+            <label>Placement Fee (Foreign)</label>
+            <input type="number" id="fte-fee-foreign" readonly>
+          </div>
+          <div class="form-group">
+            <label>Base Revenue (INR) [Excl. GST]</label>
+            <input type="number" id="fte-rev-inr" readonly>
+          </div>
+          <div class="form-group">
+            <label>GST %</label>
+            <input type="number" id="fte-gst-pct" readonly>
+          </div>
+          <div class="form-group">
+            <label>Invoice Total (INR)</label>
+            <input type="number" id="fte-inv-total" readonly>
+          </div>
+          <div class="form-group">
+            <label>Invoice Eligibility Date</label>
+            <input type="date" id="fte-eligible-date" readonly>
+          </div>
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="fte-inv-no">
+          </div>
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="date" id="fte-inv-date">
+          </div>
+          <div class="form-group">
+            <label>Payment Due Date</label>
+            <input type="date" id="fte-due-date">
+          </div>
+          <div class="form-group">
+            <label>Actual Client Payment (INR)</label>
+            <input type="number" step="0.01" id="fte-paid" value="0" oninput="calcFTERow()">
+          </div>
+          <div class="form-group">
+            <label>Actual Payment Date</label>
+            <input type="date" id="fte-pay-date">
+          </div>
+          <div class="form-group">
+            <label>Outstanding Amount (INR)</label>
+            <input type="number" id="fte-outstanding" readonly>
+          </div>
+          <div class="form-group">
+            <label>Collection Status</label>
+            <select id="fte-collection-status">
+              <option value="Invoice Pending">Invoice Pending</option>
+              <option value="Invoiced">Invoiced</option>
+              <option value="Payment Due">Payment Due</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Paid">Paid</option>
+              <option value="Short Paid">Short Paid</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Disputed">Disputed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Replacement / Guarantee Period (Days)</label>
+            <input type="number" id="fte-guarantee-days" value="90">
+          </div>
+          <div class="form-group col-span-3">
+            <label>Notes</label>
+            <textarea id="fte-notes" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-fte')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Placement</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONTRACTOR MASTER -->
+  <div class="modal-overlay" id="modal-contractor-master">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Contractor Master Profile</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-contractor-master')"></i>
+      </div>
+      <form id="form-contractor-master" onsubmit="saveContractorProfile(event)">
+        <input type="hidden" id="cm-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Contractor Full Name *</label>
+            <input type="text" id="cm-name" required>
+          </div>
+          <div class="form-group">
+            <label>Client Organization *</label>
+            <select id="cm-client" required><option value="">Select Client</option></select>
+          </div>
+          <div class="form-group">
+            <label>Designation / Position</label>
+            <input type="text" id="cm-position" required>
+          </div>
+          <div class="form-group">
+            <label>Recruiter POC *</label>
+            <select id="cm-recruiter" required onchange="onCMRecruiterChange(this.value)"><option value="">Select Recruiter</option></select>
+          </div>
+          <div class="form-group">
+            <label>Team Lead</label>
+            <input type="text" id="cm-tl" readonly>
+          </div>
+          <div class="form-group">
+            <label>Assigned Team</label>
+            <input type="text" id="cm-team" readonly>
+          </div>
+          <div class="form-group">
+            <label>Contract Start Date</label>
+            <input type="date" id="cm-start">
+          </div>
+          <div class="form-group">
+            <label>Contract End Date</label>
+            <input type="date" id="cm-end">
+          </div>
+          <div class="form-group">
+            <label>Contractor Monthly Salary (INR) *</label>
+            <input type="number" step="0.01" id="cm-salary" required>
+          </div>
+          <div class="form-group">
+            <label>Client Monthly Billing Rate *</label>
+            <input type="number" step="0.01" id="cm-billrate" required>
+          </div>
+          <div class="form-group">
+            <label>Billing Currency</label>
+            <select id="cm-curr"></select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="cm-status">
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+              <option value="Terminated">Terminated</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-contractor-master')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Contractor Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CLIENT MASTER -->
+  <div class="modal-overlay" id="modal-client-master">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Client Master Profile</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-client-master')"></i>
+      </div>
+      <form id="form-client-master" onsubmit="saveClientProfile(event)">
+        <input type="hidden" id="cl-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Client Organization Name *</label>
+            <input type="text" id="cl-name" required>
+          </div>
+          <div class="form-group">
+            <label>Country *</label>
+            <input type="text" id="cl-country" value="India" required>
+          </div>
+          <div class="form-group">
+            <label>Billing Currency *</label>
+            <select id="cl-currency" required></select>
+          </div>
+          <div class="form-group">
+            <label>Engagement Scope *</label>
+            <select id="cl-scope">
+              <option value="Both">Contract & Full-Time</option>
+              <option value="Contract">Contract Staffing Only</option>
+              <option value="Full-Time">Full-Time Only</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Billing Mechanism</label>
+            <select id="cl-payout-type">
+              <option value="Monthly Contract Billing">Monthly Contract Billing</option>
+              <option value="Percentage of CTC">Percentage of CTC</option>
+              <option value="Fixed Placement Fee">Fixed Placement Fee</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Invoice Eligibility Days (Post DOJ)</label>
+            <input type="number" id="cl-inv-days" value="60" title="Days from DOJ before eligible to invoice">
+          </div>
+          <div class="form-group">
+            <label>Agreed Payment Terms (Days)</label>
+            <input type="number" id="cl-pay-terms" value="30" title="Payment due days after invoice date">
+          </div>
+          <div class="form-group">
+            <label>GST Applicable?</label>
+            <select id="cl-gst-app" onchange="toggleClientGST(this.value)">
+              <option value="Yes">Yes (Domestic 18%)</option>
+              <option value="No">No (SEZ / Export / Zero)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>GST Rate %</label>
+            <input type="number" id="cl-gst-rate" value="18">
+          </div>
+          <div class="form-group">
+            <label>Finance / Billing Email POC</label>
+            <input type="email" id="cl-finance-poc">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="cl-status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-client-master')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Client Master</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EXPENSE ENTRY -->
+  <div class="modal-overlay" id="modal-expense">
+    <div class="modal" style="width: 650px;">
+      <div class="modal-header">
+        <h3>Direct & Contractor Expense</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-expense')"></i>
+      </div>
+      <form id="form-expense" onsubmit="saveExpense(event)">
+        <input type="hidden" id="exp-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Expense Date *</label>
+            <input type="date" id="exp-date" required>
+          </div>
+          <div class="form-group">
+            <label>Expense Category *</label>
+            <select id="exp-type" required>
+              <option value="Laptop Purchase">Laptop Purchase</option>
+              <option value="Laptop Courier">Laptop Courier</option>
+              <option value="Software License">Software License</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Recruitment Cost">Recruitment Cost</option>
+              <option value="Client Specific Expense">Client Specific Expense</option>
+              <option value="Other Operational">Other Operational</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Related Contract ID (Optional)</label>
+            <select id="exp-contract-id"><option value="">-- None / General --</option></select>
+          </div>
+          <div class="form-group">
+            <label>Currency *</label>
+            <select id="exp-curr" onchange="updateExpForex()"></select>
+          </div>
+          <div class="form-group">
+            <label>Amount (Currency) *</label>
+            <input type="number" step="0.01" id="exp-amount" required oninput="calcExpINR()">
+          </div>
+          <div class="form-group">
+            <label>Forex Rate to INR *</label>
+            <input type="number" step="0.0001" id="exp-rate" value="1" required oninput="calcExpINR()">
+          </div>
+          <div class="form-group">
+            <label>Total INR</label>
+            <input type="number" id="exp-inr" readonly>
+          </div>
+          <div class="form-group col-span-2">
+            <label>Notes / Description</label>
+            <input type="text" id="exp-notes">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-expense')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CURRENCY RATE -->
+  <div class="modal-overlay" id="modal-currency">
+    <div class="modal" style="width: 500px;">
+      <div class="modal-header">
+        <h3>Currency Conversion Peg</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-currency')"></i>
+      </div>
+      <form id="form-currency" onsubmit="saveCurrency(event)">
+        <div class="form-grid" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label>Currency Code (e.g. USD, EUR, GBP, AED) *</label>
+            <input type="text" id="curr-code" required uppercase style="text-transform:uppercase;">
+          </div>
+          <div class="form-group">
+            <label>1 Currency = INR Equivalent *</label>
+            <input type="number" step="0.0001" id="curr-rate" required>
+          </div>
+          <div class="form-group">
+            <label>Effective Date *</label>
+            <input type="date" id="curr-date" required>
+          </div>
+          <div class="form-group">
+            <label>Updated By</label>
+            <input type="text" id="curr-updatedby" value="Finance Team">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-currency')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Currency</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TEAM & RECRUITER -->
+  <div class="modal-overlay" id="modal-team">
+    <div class="modal" style="width: 500px;">
+      <div class="modal-header">
+        <h3>Add Team Member</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-team')"></i>
+      </div>
+      <form id="form-team" onsubmit="saveTeamMember(event)">
+        <div class="form-grid" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label>Recruiter Full Name *</label>
+            <input type="text" id="tm-recruiter" required>
+          </div>
+          <div class="form-group">
+            <label>Team Lead Full Name *</label>
+            <input type="text" id="tm-tl" required>
+          </div>
+          <div class="form-group">
+            <label>Team / Division Name *</label>
+            <input type="text" id="tm-name" required placeholder="e.g. IT Staffing, BFSI, Healthcare">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-team')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: FOLLOW-UP UPDATE -->
+  <div class="modal-overlay" id="modal-fu-edit">
+    <div class="modal" style="width: 500px;">
+      <div class="modal-header">
+        <h3>Update Invoice Follow-Up Status</h3>
+        <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('modal-fu-edit')"></i>
+      </div>
+      <form id="form-fu-edit" onsubmit="saveFUDetails(event)">
+        <input type="hidden" id="fu-ref-type">
+        <input type="hidden" id="fu-ref-id">
+        <div class="form-grid" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="fu-inv-no" readonly>
+          </div>
+          <div class="form-group">
+            <label>Follow-Up Status</label>
+            <select id="fu-status-select">
+              <option value="Follow-Up Required">Follow-Up Required</option>
+              <option value="Client Promised Payment">Client Promised Payment</option>
+              <option value="Escalated to Sales/Management">Escalated to Sales/Management</option>
+              <option value="Disputed">Disputed</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Next Follow-Up Date</label>
+            <input type="date" id="fu-date-picker">
+          </div>
+          <div class="form-group">
+            <label>Follow-Up Owner</label>
+            <input type="text" id="fu-owner-input">
+          </div>
+          <div class="form-group">
+            <label>Remarks / Discussion Log</label>
+            <textarea id="fu-notes-area" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-fu-edit')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Follow-Up</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       DATA ARCHITECTURE & LOCAL STORAGE INITIALIZATION (EMPTY BUSINESS DATA)
+       ========================================================================= */
+    const STORAGE_KEY = "STAFFING_OPS_DATA_V1";
+
+    const defaultState = {
+      clients: [],
+      contractors: [],
+      contracts: [],
+      fulltimes: [],
+      expenses: [],
+      teams: [],
+      currencies: [
+        { code: "INR", rate: 1.0, date: "2026-01-01", updatedBy: "System", active: true },
+        { code: "USD", rate: 85.50, date: "2026-01-01", updatedBy: "System", active: true },
+        { code: "EUR", rate: 92.00, date: "2026-01-01", updatedBy: "System", active: true },
+        { code: "GBP", rate: 108.00, date: "2026-01-01", updatedBy: "System", active: true },
+        { code: "AED", rate: 23.25, date: "2026-01-01", updatedBy: "System", active: true }
+      ],
+      config: {
+        defaultGst: 18,
+        forexPolicy: "TRANSACTION"
+      }
+    };
+
+    let appData = loadState();
+
+    function loadState() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (!data) return defaultState;
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        return defaultState;
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    }
+
+    /* Currency Helpers */
+    function getExchangeRate(code) {
+      if (!code || code === "INR") return 1.0;
+      const c = appData.currencies.find(x => x.code.toUpperCase() === code.toUpperCase() && x.active);
+      return c ? Number(c.rate) : 1.0;
+    }
+
+    function formatINR(val) {
+      val = Number(val) || 0;
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+    }
+
+    function formatNumber(val, decimals = 2) {
+      return (Number(val) || 0).toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    /* Tab Controller */
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      const target = document.getElementById(`tab-${tabId}`);
+      if (target) target.classList.add('active');
+
+      const navs = document.querySelectorAll('.nav-item');
+      navs.forEach(nav => {
+        if (nav.getAttribute('onclick') && nav.getAttribute('onclick').includes(tabId)) {
+          nav.classList.add('active');
+        }
+      });
+
+      const titles = {
+        dashboard: "Executive Management Dashboard",
+        contract: "Contract Staffing Revenue & Margin Ledger",
+        fulltime: "Full-Time Placement Revenue & Milestone Tracker",
+        contractors: "Contractor Master Directory",
+        clients: "Client Master Profiles & Commercial Terms",
+        invoices: "Central Invoice & Cash Collections Tracker",
+        expenses: "Direct & Operational Expense Ledger",
+        currency: "Foreign Currency Conversion Pegs",
+        teams: "Recruiter & Team Organizational Hierarchy",
+        followups: "Accounts Receivable & Payment Follow-Up Queue",
+        settings: "System Rules & Lookup Settings"
+      };
+      document.getElementById('page-header-title').innerText = titles[tabId] || "StaffingOps Hub";
+
+      // Render tab-specific elements
+      if (tabId === 'dashboard') renderDashboard();
+      if (tabId === 'contract') renderContractsTable();
+      if (tabId === 'fulltime') renderFTETable();
+      if (tabId === 'contractors') renderContractorMasterTable();
+      if (tabId === 'clients') renderClientMasterTable();
+      if (tabId === 'invoices') renderInvoicesTable();
+      if (tabId === 'expenses') renderExpensesTable();
+      if (tabId === 'currency') renderCurrencyTable();
+      if (tabId === 'teams') renderTeamsTable();
+      if (tabId === 'followups') renderFollowUpsTable();
+    }
+
+    /* Modal Controls */
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    /* Dropdown Populate Utilities */
+    function populateDropdowns() {
+      // Currency Selects
+      const currSelects = ['cm-curr', 'cl-currency', 'exp-curr'];
+      currSelects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = "";
+        appData.currencies.forEach(c => {
+          el.innerHTML += `<option value="${c.code}">${c.code} (1 = ₹${c.rate})</option>`;
+        });
+      });
+
+      // Client Selects
+      const clientSelects = ['cm-client', 'con-contractor-select', 'fte-client-select', 'filt-client'];
+      const filtClient = document.getElementById('filt-client');
+      if (filtClient) {
+        filtClient.innerHTML = '<option value="ALL">All Clients</option>';
+        appData.clients.forEach(cl => filtClient.innerHTML += `<option value="${cl.name}">${cl.name}</option>`);
+      }
+
+      const cmClient = document.getElementById('cm-client');
+      if (cmClient) {
+        cmClient.innerHTML = '<option value="">Select Client</option>';
+        appData.clients.forEach(cl => cmClient.innerHTML += `<option value="${cl.name}">${cl.name}</option>`);
+      }
+
+      const fteClient = document.getElementById('fte-client-select');
+      if (fteClient) {
+        fteClient.innerHTML = '<option value="">-- Select Client --</option>';
+        appData.clients.forEach(cl => fteClient.innerHTML += `<option value="${cl.name}">${cl.name}</option>`);
+      }
+
+      // Teams and Recruiters
+      const filtTeam = document.getElementById('filt-team');
+      const filtRec = document.getElementById('filt-recruiter');
+      const fteTeam = document.getElementById('fte-team-select');
+      const cmRec = document.getElementById('cm-recruiter');
+
+      const uniqueTeams = [...new Set(appData.teams.map(t => t.team))];
+      const uniqueRecruiters = [...new Set(appData.teams.map(t => t.recruiter))];
+
+      if (filtTeam) {
+        filtTeam.innerHTML = '<option value="ALL">All Teams</option>';
+        uniqueTeams.forEach(t => filtTeam.innerHTML += `<option value="${t}">${t}</option>`);
+      }
+      if (filtRec) {
+        filtRec.innerHTML = '<option value="ALL">All Recruiters</option>';
+        uniqueRecruiters.forEach(r => filtRec.innerHTML += `<option value="${r}">${r}</option>`);
+      }
+      if (fteTeam) {
+        fteTeam.innerHTML = '<option value="">-- Select Team --</option>';
+        uniqueTeams.forEach(t => fteTeam.innerHTML += `<option value="${t}">${t}</option>`);
+      }
+      if (cmRec) {
+        cmRec.innerHTML = '<option value="">Select Recruiter</option>';
+        appData.teams.forEach(t => cmRec.innerHTML += `<option value="${t.recruiter}">${t.recruiter} (${t.team})</option>`);
+      }
+
+      // Contractors Dropdown in Contract Screen
+      const conSel = document.getElementById('con-contractor-select');
+      if (conSel) {
+        conSel.innerHTML = '<option value="">-- Select Contractor Profile --</option>';
+        appData.contractors.forEach(c => {
+          conSel.innerHTML += `<option value="${c.id}">${c.name} - ${c.client} (${c.position})</option>`;
+        });
+      }
+
+      // Contract Select in Expense
+      const expCon = document.getElementById('exp-contract-id');
+      if (expCon) {
+        expCon.innerHTML = '<option value="">-- None / General Expense --</option>';
+        appData.contracts.forEach(cn => {
+          expCon.innerHTML += `<option value="${cn.id}">${cn.id} - ${cn.contractorName} (${cn.month})</option>`;
+        });
+      }
+    }
+
+    /* =========================================================================
+       MODULE 2: CONTRACT REVENUE ENGINE
+       ========================================================================= */
+    function openContractModal(id = null) {
+      populateDropdowns();
+      const form = document.getElementById('form-contract');
+      form.reset();
+      document.getElementById('contract-id').value = id || "";
+      document.getElementById('contract-modal-title').innerText = id ? "Edit Contract Billing Entry" : "New Monthly Contract Billing Entry";
+
+      if (id) {
+        const item = appData.contracts.find(x => x.id === id);
+        if (item) {
+          document.getElementById('contract-id').value = item.id;
+          document.getElementById('con-contractor-select').value = item.contractorId;
+          document.getElementById('con-client').value = item.client;
+          document.getElementById('con-position').value = item.position;
+          document.getElementById('con-team').value = item.team;
+          document.getElementById('con-tl').value = item.teamLead;
+          document.getElementById('con-recruiter').value = item.recruiter;
+          document.getElementById('con-month').value = item.month;
+          document.getElementById('con-period-start').value = item.periodStart || "";
+          document.getElementById('con-period-end').value = item.periodEnd || "";
+          document.getElementById('con-curr').value = item.currency;
+          document.getElementById('con-billrate').value = item.billingRate;
+          document.getElementById('con-exrate').value = item.exRate;
+          document.getElementById('con-rev-inr').value = item.revenueINR;
+          document.getElementById('con-gst-pct').value = item.gstPct;
+          document.getElementById('con-inv-total').value = item.invTotal;
+          document.getElementById('con-pay').value = item.contractorPay;
+          document.getElementById('con-payroll-cost').value = item.payrollCost || 0;
+          document.getElementById('con-laptop-cost').value = item.laptopCost || 0;
+          document.getElementById('con-courier-cost').value = item.courierCost || 0;
+          document.getElementById('con-software-cost').value = item.softwareCost || 0;
+          document.getElementById('con-other-cost').value = item.otherCost || 0;
+          document.getElementById('con-total-cost').value = item.totalCost;
+          document.getElementById('con-profit').value = item.profit;
+          document.getElementById('con-profit-pct').value = item.profitPct.toFixed(2) + "%";
+          document.getElementById('con-inv-no').value = item.invNo || "";
+          document.getElementById('con-inv-date').value = item.invDate || "";
+          document.getElementById('con-due-date').value = item.dueDate || "";
+          document.getElementById('con-paid').value = item.paidAmount || 0;
+          document.getElementById('con-pay-date').value = item.payDate || "";
+          document.getElementById('con-outstanding').value = item.outstanding;
+          document.getElementById('con-collection-status').value = item.collectionStatus;
+          document.getElementById('con-fu-date').value = item.fuDate || "";
+          document.getElementById('con-notes').value = item.notes || "";
+        }
+      }
+      openModal('modal-contract');
+    }
+
+    function onContractorSelected(contractorId) {
+      if (!contractorId) return;
+      const c = appData.contractors.find(x => x.id === contractorId);
+      if (!c) return;
+      document.getElementById('con-client').value = c.client;
+      document.getElementById('con-position').value = c.position;
+      document.getElementById('con-team').value = c.team;
+      document.getElementById('con-tl').value = c.teamLead;
+      document.getElementById('con-recruiter').value = c.recruiter;
+      document.getElementById('con-curr').value = c.currency;
+      document.getElementById('con-billrate').value = c.billingRate;
+      document.getElementById('con-pay').value = c.salary;
+
+      // Currency Rate
+      const exRate = getExchangeRate(c.currency);
+      document.getElementById('con-exrate').value = exRate;
+
+      // Client GST retrieval
+      const clientObj = appData.clients.find(x => x.name.toLowerCase() === c.client.toLowerCase());
+      const gstPct = (clientObj && clientObj.gstApplicable === "Yes") ? Number(clientObj.gstRate) : 0;
+      document.getElementById('con-gst-pct').value = gstPct;
+
+      calcContractRow();
+    }
+
+    function calcContractRow() {
+      const billRate = Number(document.getElementById('con-billrate').value) || 0;
+      const exRate = Number(document.getElementById('con-exrate').value) || 1.0;
+      const gstPct = Number(document.getElementById('con-gst-pct').value) || 0;
+
+      // REVENUE = Base Amount excluding GST
+      const revINR = billRate * exRate;
+      const gstAmount = revINR * (gstPct / 100);
+      const invoiceTotal = revINR + gstAmount;
+
+      // COSTS
+      const pay = Number(document.getElementById('con-pay').value) || 0;
+      const payroll = Number(document.getElementById('con-payroll-cost').value) || 0;
+      const laptop = Number(document.getElementById('con-laptop-cost').value) || 0;
+      const courier = Number(document.getElementById('con-courier-cost').value) || 0;
+      const software = Number(document.getElementById('con-software-cost').value) || 0;
+      const other = Number(document.getElementById('con-other-cost').value) || 0;
+
+      const totalCost = pay + payroll + laptop + courier + software + other;
+      const profit = revINR - totalCost;
+      const profitPct = revINR > 0 ? (profit / revINR) * 100 : 0;
+
+      // COLLECTIONS
+      const paid = Number(document.getElementById('con-paid').value) || 0;
+      const outstanding = invoiceTotal - paid;
+
+      document.getElementById('con-rev-inr').value = revINR.toFixed(2);
+      document.getElementById('con-inv-total').value = invoiceTotal.toFixed(2);
+      document.getElementById('con-total-cost').value = totalCost.toFixed(2);
+      document.getElementById('con-profit').value = profit.toFixed(2);
+      document.getElementById('con-profit-pct').value = profitPct.toFixed(2) + "%";
+      document.getElementById('con-outstanding').value = outstanding.toFixed(2);
+
+      // Auto Status Logic
+      const invNo = document.getElementById('con-inv-no').value.trim();
+      const statusEl = document.getElementById('con-collection-status');
+      if (!invNo) {
+        statusEl.value = "Not Invoiced";
+      } else {
+        if (outstanding <= 0.01 && invoiceTotal > 0) {
+          statusEl.value = "Paid";
+        } else if (paid > 0 && outstanding > 0) {
+          statusEl.value = (invoiceTotal - paid <= 5000) ? "Short Paid" : "Partially Paid";
+        } else {
+          statusEl.value = "Invoiced";
+        }
+      }
+    }
+
+    function saveContract(e) {
+      e.preventDefault();
+      const id = document.getElementById('contract-id').value || `CON-${Date.now().toString().slice(-6)}`;
+      const cId = document.getElementById('con-contractor-select').value;
+      const cProfile = appData.contractors.find(x => x.id === cId);
+
+      const record = {
+        id: id,
+        contractorId: cId,
+        contractorName: cProfile ? cProfile.name : "Unknown",
+        client: document.getElementById('con-client').value,
+        position: document.getElementById('con-position').value,
+        team: document.getElementById('con-team').value,
+        teamLead: document.getElementById('con-tl').value,
+        recruiter: document.getElementById('con-recruiter').value,
+        month: document.getElementById('con-month').value,
+        periodStart: document.getElementById('con-period-start').value,
+        periodEnd: document.getElementById('con-period-end').value,
+        currency: document.getElementById('con-curr').value,
+        billingRate: Number(document.getElementById('con-billrate').value),
+        exRate: Number(document.getElementById('con-exrate').value),
+        revenueINR: Number(document.getElementById('con-rev-inr').value),
+        gstPct: Number(document.getElementById('con-gst-pct').value),
+        invTotal: Number(document.getElementById('con-inv-total').value),
+        contractorPay: Number(document.getElementById('con-pay').value),
+        payrollCost: Number(document.getElementById('con-payroll-cost').value),
+        laptopCost: Number(document.getElementById('con-laptop-cost').value),
+        courierCost: Number(document.getElementById('con-courier-cost').value),
+        softwareCost: Number(document.getElementById('con-software-cost').value),
+        otherCost: Number(document.getElementById('con-other-cost').value),
+        totalCost: Number(document.getElementById('con-total-cost').value),
+        profit: Number(document.getElementById('con-profit').value),
+        profitPct: parseFloat(document.getElementById('con-profit-pct').value),
+        invNo: document.getElementById('con-inv-no').value.trim(),
+        invDate: document.getElementById('con-inv-date').value,
+        dueDate: document.getElementById('con-due-date').value,
+        paidAmount: Number(document.getElementById('con-paid').value),
+        payDate: document.getElementById('con-pay-date').value,
+        outstanding: Number(document.getElementById('con-outstanding').value),
+        collectionStatus: document.getElementById('con-collection-status').value,
+        fuDate: document.getElementById('con-fu-date').value,
+        fuOwner: document.getElementById('con-recruiter').value,
+        fuStatus: "Follow-Up Required",
+        notes: document.getElementById('con-notes').value
+      };
+
+      const existingIndex = appData.contracts.findIndex(x => x.id === id);
+      if (existingIndex >= 0) {
+        appData.contracts[existingIndex] = record;
+      } else {
+        appData.contracts.push(record);
+      }
+
+      saveState();
+      closeModal('modal-contract');
+      renderContractsTable();
+    }
+
+    function renderContractsTable() {
+      const tbody = document.querySelector('#tbl-contract tbody');
+      tbody.innerHTML = "";
+      if (appData.contracts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="22" style="text-align:center; padding:20px; color:var(--text-muted);">No contract records entered yet. Click "New Contract Billing Entry" to record revenue.</td></tr>`;
+        return;
+      }
+
+      appData.contracts.forEach(c => {
+        const badgeClass = c.collectionStatus === "Paid" ? "badge-success" : (c.collectionStatus.includes("Overdue") || c.collectionStatus.includes("Short") ? "badge-danger" : "badge-warning");
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${c.id}</strong></td>
+            <td>${c.contractorName}</td>
+            <td>${c.client}</td>
+            <td>${c.team}</td>
+            <td>${c.recruiter}</td>
+            <td>${c.month}</td>
+            <td>${c.currency}</td>
+            <td class="num">${formatNumber(c.billingRate)}</td>
+            <td class="num">${formatNumber(c.exRate, 4)}</td>
+            <td class="num calc-cell">${formatINR(c.revenueINR)}</td>
+            <td class="num">${c.gstPct}%</td>
+            <td class="num calc-cell">${formatINR(c.invTotal)}</td>
+            <td class="num">${formatINR(c.contractorPay)}</td>
+            <td class="num">${formatINR(c.totalCost - c.contractorPay)}</td>
+            <td class="num">${formatINR(c.totalCost)}</td>
+            <td class="num calc-cell" style="color:${c.profit >= 0 ? 'var(--success)' : 'var(--danger)'}">${formatINR(c.profit)}</td>
+            <td class="num calc-cell">${c.profitPct.toFixed(1)}%</td>
+            <td>${c.invNo || '<span style="color:#94a3b8">Pending</span>'}</td>
+            <td class="num">${formatINR(c.paidAmount)}</td>
+            <td class="num" style="font-weight:700; color:${c.outstanding > 0 ? 'var(--danger)' : 'inherit'}">${formatINR(c.outstanding)}</td>
+            <td><span class="badge ${badgeClass}">${c.collectionStatus}</span></td>
+            <td>
+              <button class="btn btn-outline" style="padding:2px 6px;" onclick="openContractModal('${c.id}')"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('contracts', '${c.id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    /* =========================================================================
+       MODULE 3: FULL-TIME REVENUE ENGINE
+       ========================================================================= */
+    function openFTEModal(id = null) {
+      populateDropdowns();
+      const form = document.getElementById('form-fte');
+      form.reset();
+      document.getElementById('fte-id').value = id || "";
+      document.getElementById('fte-modal-title').innerText = id ? "Edit Placement Record" : "New Full-Time Placement Revenue";
+
+      if (id) {
+        const item = appData.fulltimes.find(x => x.id === id);
+        if (item) {
+          document.getElementById('fte-id').value = item.id;
+          document.getElementById('fte-candidate').value = item.candidate;
+          document.getElementById('fte-client-select').value = item.client;
+          document.getElementById('fte-position').value = item.position;
+          document.getElementById('fte-team-select').value = item.team;
+          document.getElementById('fte-tl').value = item.teamLead;
+          onFTETeamSelected(item.team);
+          document.getElementById('fte-recruiter-select').value = item.recruiter;
+          document.getElementById('fte-doj').value = item.doj;
+          document.getElementById('fte-ctc').value = item.ctc;
+          document.getElementById('fte-feepct').value = item.feePct;
+          document.getElementById('fte-curr').value = item.currency;
+          document.getElementById('fte-exrate').value = item.exRate;
+          document.getElementById('fte-fee-foreign').value = item.feeForeign;
+          document.getElementById('fte-rev-inr').value = item.revenueINR;
+          document.getElementById('fte-gst-pct').value = item.gstPct;
+          document.getElementById('fte-inv-total').value = item.invTotal;
+          document.getElementById('fte-eligible-date').value = item.eligibleDate;
+          document.getElementById('fte-inv-no').value = item.invNo || "";
+          document.getElementById('fte-inv-date').value = item.invDate || "";
+          document.getElementById('fte-due-date').value = item.dueDate || "";
+          document.getElementById('fte-paid').value = item.paidAmount || 0;
+          document.getElementById('fte-pay-date').value = item.payDate || "";
+          document.getElementById('fte-outstanding').value = item.outstanding;
+          document.getElementById('fte-collection-status').value = item.collectionStatus;
+          document.getElementById('fte-guarantee-days').value = item.guaranteeDays || 90;
+          document.getElementById('fte-notes').value = item.notes || "";
+        }
+      }
+      openModal('modal-fte');
+    }
+
+    function onFTEClientSelected(clientName) {
+      if (!clientName) return;
+      const cl = appData.clients.find(x => x.name.toLowerCase() === clientName.toLowerCase());
+      if (!cl) return;
+      document.getElementById('fte-curr').value = cl.currency;
+      document.getElementById('fte-exrate').value = getExchangeRate(cl.currency);
+      const gstPct = (cl.gstApplicable === "Yes") ? Number(cl.gstRate) : 0;
+      document.getElementById('fte-gst-pct').value = gstPct;
+      calcFTEEligibility();
+      calcFTERow();
+    }
+
+    function onFTETeamSelected(teamName) {
+      const recSelect = document.getElementById('fte-recruiter-select');
+      recSelect.innerHTML = '<option value="">-- Select Recruiter --</option>';
+      const teamRecs = appData.teams.filter(x => x.team === teamName);
+      teamRecs.forEach(t => recSelect.innerHTML += `<option value="${t.recruiter}">${t.recruiter}</option>`);
+      if (teamRecs.length > 0) {
+        document.getElementById('fte-tl').value = teamRecs[0].teamLead;
+      }
+    }
+
+    function calcFTEEligibility() {
+      const doj = document.getElementById('fte-doj').value;
+      const clientName = document.getElementById('fte-client-select').value;
+      if (!doj) return;
+      const cl = appData.clients.find(x => x.name.toLowerCase() === (clientName || "").toLowerCase());
+      const eligDays = cl ? (Number(cl.invoiceEligibilityDays) || 60) : 60;
+      const d = new Date(doj);
+      d.setDate(d.getDate() + eligDays);
+      document.getElementById('fte-eligible-date').value = d.toISOString().split('T')[0];
+    }
+
+    function calcFTERow() {
+      const ctc = Number(document.getElementById('fte-ctc').value) || 0;
+      const feePct = Number(document.getElementById('fte-feepct').value) || 0;
+      const exRate = Number(document.getElementById('fte-exrate').value) || 1.0;
+      const gstPct = Number(document.getElementById('fte-gst-pct').value) || 0;
+
+      const feeForeign = ctc * (feePct / 100);
+      const baseRevINR = feeForeign * exRate;
+      const gstAmount = baseRevINR * (gstPct / 100);
+      const invTotal = baseRevINR + gstAmount;
+
+      const paid = Number(document.getElementById('fte-paid').value) || 0;
+      const outstanding = invTotal - paid;
+
+      document.getElementById('fte-fee-foreign').value = feeForeign.toFixed(2);
+      document.getElementById('fte-rev-inr').value = baseRevINR.toFixed(2);
+      document.getElementById('fte-inv-total').value = invTotal.toFixed(2);
+      document.getElementById('fte-outstanding').value = outstanding.toFixed(2);
+
+      const invNo = document.getElementById('fte-inv-no').value.trim();
+      const statusEl = document.getElementById('fte-collection-status');
+      if (!invNo) {
+        statusEl.value = "Invoice Pending";
+      } else {
+        if (outstanding <= 0.01 && invTotal > 0) {
+          statusEl.value = "Paid";
+        } else if (paid > 0 && outstanding > 0) {
+          statusEl.value = (invTotal - paid <= 5000) ? "Short Paid" : "Partially Paid";
+        } else {
+          statusEl.value = "Invoiced";
+        }
+      }
+    }
+
+    function saveFTE(e) {
+      e.preventDefault();
+      const id = document.getElementById('fte-id').value || `FTE-${Date.now().toString().slice(-6)}`;
+      const record = {
+        id: id,
+        candidate: document.getElementById('fte-candidate').value,
+        client: document.getElementById('fte-client-select').value,
+        position: document.getElementById('fte-position').value,
+        team: document.getElementById('fte-team-select').value,
+        teamLead: document.getElementById('fte-tl').value,
+        recruiter: document.getElementById('fte-recruiter-select').value,
+        doj: document.getElementById('fte-doj').value,
+        ctc: Number(document.getElementById('fte-ctc').value),
+        feePct: Number(document.getElementById('fte-feepct').value),
+        currency: document.getElementById('fte-curr').value,
+        exRate: Number(document.getElementById('fte-exrate').value),
+        feeForeign: Number(document.getElementById('fte-fee-foreign').value),
+        revenueINR: Number(document.getElementById('fte-rev-inr').value),
+        gstPct: Number(document.getElementById('fte-gst-pct').value),
+        invTotal: Number(document.getElementById('fte-inv-total').value),
+        eligibleDate: document.getElementById('fte-eligible-date').value,
+        invNo: document.getElementById('fte-inv-no').value.trim(),
+        invDate: document.getElementById('fte-inv-date').value,
+        dueDate: document.getElementById('fte-due-date').value,
+        paidAmount: Number(document.getElementById('fte-paid').value),
+        payDate: document.getElementById('fte-pay-date').value,
+        outstanding: Number(document.getElementById('fte-outstanding').value),
+        collectionStatus: document.getElementById('fte-collection-status').value,
+        guaranteeDays: Number(document.getElementById('fte-guarantee-days').value),
+        fuDate: document.getElementById('fte-due-date').value,
+        fuOwner: document.getElementById('fte-recruiter-select').value,
+        fuStatus: "Follow-Up Required",
+        notes: document.getElementById('fte-notes').value
+      };
+
+      const existingIndex = appData.fulltimes.findIndex(x => x.id === id);
+      if (existingIndex >= 0) {
+        appData.fulltimes[existingIndex] = record;
+      } else {
+        appData.fulltimes.push(record);
+      }
+
+      saveState();
+      closeModal('modal-fte');
+      renderFTETable();
+    }
+
+    function renderFTETable() {
+      const tbody = document.querySelector('#tbl-fte tbody');
+      tbody.innerHTML = "";
+      if (appData.fulltimes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="20" style="text-align:center; padding:20px; color:var(--text-muted);">No full-time placement records found. Click "New Full-Time Placement" to record a placement.</td></tr>`;
+        return;
+      }
+
+      appData.fulltimes.forEach(f => {
+        const badgeClass = f.collectionStatus === "Paid" ? "badge-success" : (f.collectionStatus.includes("Overdue") || f.collectionStatus.includes("Short") ? "badge-danger" : "badge-warning");
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${f.id}</strong></td>
+            <td>${f.candidate}</td>
+            <td>${f.client}</td>
+            <td>${f.team}</td>
+            <td>${f.recruiter}</td>
+            <td>${f.doj}</td>
+            <td class="num">${formatINR(f.ctc)}</td>
+            <td class="num">${f.feePct}%</td>
+            <td>${f.currency}</td>
+            <td class="num">${formatNumber(f.feeForeign)}</td>
+            <td class="num calc-cell">${formatINR(f.revenueINR)}</td>
+            <td class="num">${f.gstPct}%</td>
+            <td class="num calc-cell">${formatINR(f.invTotal)}</td>
+            <td>${f.eligibleDate || '-'}</td>
+            <td>${f.invNo || '<span style="color:#94a3b8">Pending</span>'}</td>
+            <td>${f.dueDate || '-'}</td>
+            <td class="num">${formatINR(f.paidAmount)}</td>
+            <td class="num" style="font-weight:700; color:${f.outstanding > 0 ? 'var(--danger)' : 'inherit'}">${formatINR(f.outstanding)}</td>
+            <td><span class="badge ${badgeClass}">${f.collectionStatus}</span></td>
+            <td>
+              <button class="btn btn-outline" style="padding:2px 6px;" onclick="openFTEModal('${f.id}')"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('fulltimes', '${f.id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    /* =========================================================================
+       MODULE 4 & 5: CONTRACTOR & CLIENT MASTERS
+       ========================================================================= */
+    function openContractorMasterModal() {
+      populateDropdowns();
+      document.getElementById('form-contractor-master').reset();
+      document.getElementById('cm-id').value = "";
+      openModal('modal-contractor-master');
+    }
+
+    function onCMRecruiterChange(recruiterName) {
+      const rec = appData.teams.find(x => x.recruiter === recruiterName);
+      if (rec) {
+        document.getElementById('cm-tl').value = rec.teamLead;
+        document.getElementById('cm-team').value = rec.team;
+      }
+    }
+
+    function saveContractorProfile(e) {
+      e.preventDefault();
+      const id = document.getElementById('cm-id').value || `CONTR-${Date.now().toString().slice(-5)}`;
+      const profile = {
+        id: id,
+        name: document.getElementById('cm-name').value,
+        client: document.getElementById('cm-client').value,
+        position: document.getElementById('cm-position').value,
+        recruiter: document.getElementById('cm-recruiter').value,
+        teamLead: document.getElementById('cm-tl').value,
+        team: document.getElementById('cm-team').value,
+        startDate: document.getElementById('cm-start').value,
+        endDate: document.getElementById('cm-end').value,
+        salary: Number(document.getElementById('cm-salary').value),
+        billingRate: Number(document.getElementById('cm-billrate').value),
+        currency: document.getElementById('cm-curr').value,
+        status: document.getElementById('cm-status').value
+      };
+      appData.contractors.push(profile);
+      saveState();
+      closeModal('modal-contractor-master');
+      renderContractorMasterTable();
+    }
+
+    function renderContractorMasterTable() {
+      const tbody = document.querySelector('#tbl-contractor-master tbody');
+      tbody.innerHTML = "";
+      if (appData.contractors.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; color:var(--text-muted);">No contractor profiles yet. Add profiles to automatically populate Contract Revenue.</td></tr>`;
+        return;
+      }
+      appData.contractors.forEach(c => {
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${c.id}</strong></td>
+            <td>${c.name}</td>
+            <td>${c.client}</td>
+            <td>${c.position}</td>
+            <td>${c.recruiter}</td>
+            <td>${c.teamLead}</td>
+            <td>${c.team}</td>
+            <td class="num">${formatNumber(c.billingRate)}</td>
+            <td>${c.currency}</td>
+            <td class="num">${formatINR(c.salary)}</td>
+            <td><span class="badge ${c.status === 'Active' ? 'badge-success' : 'badge-warning'}">${c.status}</span></td>
+            <td>
+              <button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('contractors', '${c.id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function openClientMasterModal() {
+      populateDropdowns();
+      document.getElementById('form-client-master').reset();
+      openModal('modal-client-master');
+    }
+
+    function toggleClientGST(val) {
+      document.getElementById('cl-gst-rate').value = val === "Yes" ? 18 : 0;
+    }
+
+    function saveClientProfile(e) {
+      e.preventDefault();
+      const client = {
+        name: document.getElementById('cl-name').value.trim(),
+        country: document.getElementById('cl-country').value,
+        currency: document.getElementById('cl-currency').value,
+        scope: document.getElementById('cl-scope').value,
+        payoutType: document.getElementById('cl-payout-type').value,
+        invoiceEligibilityDays: Number(document.getElementById('cl-inv-days').value),
+        paymentTerms: Number(document.getElementById('cl-pay-terms').value),
+        gstApplicable: document.getElementById('cl-gst-app').value,
+        gstRate: Number(document.getElementById('cl-gst-rate').value),
+        financePOC: document.getElementById('cl-finance-poc').value,
+        status: document.getElementById('cl-status').value
+      };
+      appData.clients.push(client);
+      saveState();
+      closeModal('modal-client-master');
+      renderClientMasterTable();
+    }
+
+    function renderClientMasterTable() {
+      const tbody = document.querySelector('#tbl-client-master tbody');
+      tbody.innerHTML = "";
+      if (appData.clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-muted);">No client profiles defined yet. Add clients to configure commercial terms.</td></tr>`;
+        return;
+      }
+      appData.clients.forEach(c => {
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${c.name}</strong></td>
+            <td>${c.country}</td>
+            <td>${c.currency}</td>
+            <td>${c.payoutType}</td>
+            <td>${c.scope}</td>
+            <td>${c.invoiceEligibilityDays} days</td>
+            <td>${c.paymentTerms} days</td>
+            <td>${c.gstApplicable}</td>
+            <td>${c.gstRate}%</td>
+            <td><span class="badge ${c.status === 'Active' ? 'badge-success' : 'badge-warning'}">${c.status}</span></td>
+            <td>
+              <button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('clients', '${c.name}', 'name')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    /* =========================================================================
+       MODULE 6 & 10: CENTRAL INVOICE & CASH COLLECTION ENGINE
+       ========================================================================= */
+    function getAllInvoices() {
+      const list = [];
+      const today = new Date();
+
+      // From Contracts
+      appData.contracts.forEach(c => {
+        if (c.invNo || c.invTotal > 0) {
+          const invDate = c.invDate ? new Date(c.invDate) : null;
+          const dueDate = c.dueDate ? new Date(c.dueDate) : null;
+          let daysOverdue = 0;
+          if (dueDate && c.outstanding > 0 && today > dueDate) {
+            daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+          }
+          const diff = (c.invTotal - c.paidAmount > 0 && c.paidAmount > 0) ? (c.invTotal - c.paidAmount) : 0;
+          list.push({
+            invNo: c.invNo || `DRAFT-CON-${c.id}`,
+            refType: "CONTRACT",
+            refId: c.id,
+            client: c.client,
+            entityName: c.contractorName,
+            invDate: c.invDate || "-",
+            dueDate: c.dueDate || "-",
+            baseRev: c.revenueINR,
+            gstAmount: c.invTotal - c.revenueINR,
+            invTotal: c.invTotal,
+            collected: c.paidAmount,
+            diff: diff,
+            outstanding: c.outstanding,
+            daysOverdue: daysOverdue,
+            status: c.collectionStatus,
+            fuDate: c.fuDate || "-",
+            fuOwner: c.fuOwner || c.recruiter,
+            fuStatus: c.fuStatus || "Follow-Up Required",
+            notes: c.notes || ""
+          });
+        }
+      });
+
+      // From Full-Time
+      appData.fulltimes.forEach(f => {
+        if (f.invNo || f.invTotal > 0) {
+          const invDate = f.invDate ? new Date(f.invDate) : null;
+          const dueDate = f.dueDate ? new Date(f.dueDate) : null;
+          let daysOverdue = 0;
+          if (dueDate && f.outstanding > 0 && today > dueDate) {
+            daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+          }
+          const diff = (f.invTotal - f.paidAmount > 0 && f.paidAmount > 0) ? (f.invTotal - f.paidAmount) : 0;
+          list.push({
+            invNo: f.invNo || `DRAFT-FTE-${f.id}`,
+            refType: "FULLTIME",
+            refId: f.id,
+            client: f.client,
+            entityName: f.candidate,
+            invDate: f.invDate || "-",
+            dueDate: f.dueDate || "-",
+            baseRev: f.revenueINR,
+            gstAmount: f.invTotal - f.revenueINR,
+            invTotal: f.invTotal,
+            collected: f.paidAmount,
+            diff: diff,
+            outstanding: f.outstanding,
+            daysOverdue: daysOverdue,
+            status: f.collectionStatus,
+            fuDate: f.fuDate || "-",
+            fuOwner: f.fuOwner || f.recruiter,
+            fuStatus: f.fuStatus || "Follow-Up Required",
+            notes: f.notes || ""
+          });
+        }
+      });
+
+      return list;
+    }
+
+    function renderInvoicesTable() {
+      const tbody = document.querySelector('#tbl-invoices-all tbody');
+      tbody.innerHTML = "";
+      const invoices = getAllInvoices();
+
+      if (invoices.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="16" style="text-align:center; padding:20px; color:var(--text-muted);">No invoices recorded across contract or full-time engagements.</td></tr>`;
+        return;
+      }
+
+      invoices.forEach(inv => {
+        const badgeClass = inv.status === "Paid" ? "badge-success" : (inv.daysOverdue > 0 || inv.diff > 0 ? "badge-danger" : "badge-warning");
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${inv.invNo}</strong></td>
+            <td><span class="badge ${inv.refType === 'CONTRACT' ? 'badge-info' : 'badge-warning'}">${inv.refType}</span></td>
+            <td>${inv.client}</td>
+            <td>${inv.entityName}</td>
+            <td>${inv.invDate}</td>
+            <td>${inv.dueDate}</td>
+            <td class="num">${formatINR(inv.baseRev)}</td>
+            <td class="num">${formatINR(inv.gstAmount)}</td>
+            <td class="num calc-cell">${formatINR(inv.invTotal)}</td>
+            <td class="num">${formatINR(inv.collected)}</td>
+            <td class="num" style="color:${inv.diff > 0 ? 'var(--danger)' : 'inherit'}; font-weight:600;">${formatINR(inv.diff)}</td>
+            <td class="num" style="color:${inv.outstanding > 0 ? 'var(--danger)' : 'inherit'}; font-weight:700;">${formatINR(inv.outstanding)}</td>
+            <td class="num" style="color:${inv.daysOverdue > 0 ? 'var(--danger)' : 'inherit'}">${inv.daysOverdue > 0 ? `${inv.daysOverdue} d` : '-'}</td>
+            <td><span class="badge ${badgeClass}">${inv.status}</span></td>
+            <td>${inv.fuDate}</td>
+            <td>
+              <button class="btn btn-outline" style="padding:2px 6px;" onclick="openFollowUpModal('${inv.refType}', '${inv.refId}')"><i class="fa-solid fa-clock-rotate-left"></i> Follow-Up</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderFollowUpsTable() {
+      const tbody = document.querySelector('#tbl-followups tbody');
+      tbody.innerHTML = "";
+      const invoices = getAllInvoices().filter(x => x.outstanding > 0);
+
+      if (invoices.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:20px; color:var(--success);">All invoices are fully settled. No pending follow-up items.</td></tr>`;
+        return;
+      }
+
+      invoices.forEach(inv => {
+        let category = "Due Soon";
+        let catClass = "badge-info";
+        if (inv.daysOverdue > 0) {
+          category = "Overdue";
+          catClass = "badge-danger";
+        } else if (inv.diff > 0) {
+          category = "Short Paid";
+          catClass = "badge-warning";
+        }
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${inv.invNo}</strong></td>
+            <td>${inv.client}</td>
+            <td>${inv.dueDate}</td>
+            <td class="num">${formatINR(inv.invTotal)}</td>
+            <td class="num">${formatINR(inv.collected)}</td>
+            <td class="num" style="font-weight:700; color:var(--danger)">${formatINR(inv.outstanding)}</td>
+            <td class="num">${inv.daysOverdue > 0 ? `${inv.daysOverdue} days` : 'Not Due'}</td>
+            <td><span class="badge ${catClass}">${category}</span></td>
+            <td>${inv.fuDate}</td>
+            <td>${inv.fuOwner}</td>
+            <td><span class="badge badge-warning">${inv.fuStatus}</span></td>
+            <td>${inv.notes || '-'}</td>
+            <td>
+              <button class="btn btn-outline" style="padding:2px 6px;" onclick="openFollowUpModal('${inv.refType}', '${inv.refId}')"><i class="fa-solid fa-pen"></i> Update</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function openFollowUpModal(refType, refId) {
+      document.getElementById('fu-ref-type').value = refType;
+      document.getElementById('fu-ref-id').value = refId;
+      const target = (refType === "CONTRACT") 
+        ? appData.contracts.find(x => x.id === refId) 
+        : appData.fulltimes.find(x => x.id === refId);
+
+      if (target) {
+        document.getElementById('fu-inv-no').value = target.invNo || target.id;
+        document.getElementById('fu-status-select').value = target.fuStatus || "Follow-Up Required";
+        document.getElementById('fu-date-picker').value = target.fuDate || "";
+        document.getElementById('fu-owner-input').value = target.fuOwner || target.recruiter;
+        document.getElementById('fu-notes-area').value = target.notes || "";
+      }
+      openModal('modal-fu-edit');
+    }
+
+    function saveFUDetails(e) {
+      e.preventDefault();
+      const refType = document.getElementById('fu-ref-type').value;
+      const refId = document.getElementById('fu-ref-id').value;
+      const target = (refType === "CONTRACT") 
+        ? appData.contracts.find(x => x.id === refId) 
+        : appData.fulltimes.find(x => x.id === refId);
+
+      if (target) {
+        target.fuStatus = document.getElementById('fu-status-select').value;
+        target.fuDate = document.getElementById('fu-date-picker').value;
+        target.fuOwner = document.getElementById('fu-owner-input').value;
+        target.notes = document.getElementById('fu-notes-area').value;
+        saveState();
+      }
+      closeModal('modal-fu-edit');
+      renderFollowUpsTable();
+      renderInvoicesTable();
+    }
+
+    /* =========================================================================
+       MODULE 7: EXPENSES & AUXILIARY TABLES
+       ========================================================================= */
+    function openExpenseModal() {
+      populateDropdowns();
+      document.getElementById('form-expense').reset();
+      document.getElementById('exp-id').value = "";
+      document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+      updateExpForex();
+      openModal('modal-expense');
+    }
+
+    function updateExpForex() {
+      const c = document.getElementById('exp-curr').value;
+      document.getElementById('exp-rate').value = getExchangeRate(c);
+      calcExpINR();
+    }
+
+    function calcExpINR() {
+      const amt = Number(document.getElementById('exp-amount').value) || 0;
+      const rate = Number(document.getElementById('exp-rate').value) || 1.0;
+      document.getElementById('exp-inr').value = (amt * rate).toFixed(2);
+    }
+
+    function saveExpense(e) {
+      e.preventDefault();
+      const exp = {
+        id: `EXP-${Date.now().toString().slice(-5)}`,
+        date: document.getElementById('exp-date').value,
+        type: document.getElementById('exp-type').value,
+        contractId: document.getElementById('exp-contract-id').value,
+        currency: document.getElementById('exp-curr').value,
+        amount: Number(document.getElementById('exp-amount').value),
+        rate: Number(document.getElementById('exp-rate').value),
+        amountINR: Number(document.getElementById('exp-inr').value),
+        notes: document.getElementById('exp-notes').value
+      };
+      appData.expenses.push(exp);
+      saveState();
+      closeModal('modal-expense');
+      renderExpensesTable();
+    }
+
+    function renderExpensesTable() {
+      const tbody = document.querySelector('#tbl-expenses tbody');
+      tbody.innerHTML = "";
+      if (appData.expenses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; color:var(--text-muted);">No standalone expenses registered yet.</td></tr>`;
+        return;
+      }
+      appData.expenses.forEach(x => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${x.date}</td>
+            <td><strong>${x.type}</strong></td>
+            <td>${x.contractId || '-'}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>${x.currency}</td>
+            <td class="num">${formatNumber(x.amount)}</td>
+            <td class="num">${formatNumber(x.rate, 4)}</td>
+            <td class="num calc-cell">${formatINR(x.amountINR)}</td>
+            <td>${x.notes || '-'}</td>
+            <td>
+              <button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('expenses', '${x.id}')"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    /* Currency Rates Master */
+    function openCurrencyModal() {
+      document.getElementById('form-currency').reset();
+      document.getElementById('curr-date').value = new Date().toISOString().split('T')[0];
+      openModal('modal-currency');
+    }
+
+    function saveCurrency(e) {
+      e.preventDefault();
+      const code = document.getElementById('curr-code').value.trim().toUpperCase();
+      const rate = Number(document.getElementById('curr-rate').value);
+      const date = document.getElementById('curr-date').value;
+      const updatedBy = document.getElementById('curr-updatedby').value;
+
+      const idx = appData.currencies.findIndex(x => x.code === code);
+      if (idx >= 0) {
+        appData.currencies[idx] = { code, rate, date, updatedBy, active: true };
+      } else {
+        appData.currencies.push({ code, rate, date, updatedBy, active: true });
+      }
+      saveState();
+      closeModal('modal-currency');
+      renderCurrencyTable();
+    }
+
+    function renderCurrencyTable() {
+      const tbody = document.querySelector('#tbl-currency tbody');
+      tbody.innerHTML = "";
+      appData.currencies.forEach(c => {
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${c.code}</strong></td>
+            <td class="num">₹${formatNumber(c.rate, 4)}</td>
+            <td>${c.date}</td>
+            <td>${c.updatedBy}</td>
+            <td><span class="badge badge-success">Active</span></td>
+            <td>
+              ${c.code !== 'INR' ? `<button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('currencies', '${c.code}', 'code')"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    /* Team Members Master */
+    function openTeamModal() {
+      document.getElementById('form-team').reset();
+      openModal('modal-team');
+    }
+
+    function saveTeamMember(e) {
+      e.preventDefault();
+      const member = {
+        recruiter: document.getElementById('tm-recruiter').value.trim(),
+        teamLead: document.getElementById('tm-tl').value.trim(),
+        team: document.getElementById('tm-name').value.trim(),
+        status: "Active"
+      };
+      appData.teams.push(member);
+      saveState();
+      closeModal('modal-team');
+      renderTeamsTable();
+    }
+
+    function renderTeamsTable() {
+      const tbody = document.querySelector('#tbl-teams-list tbody');
+      tbody.innerHTML = "";
+      if (appData.teams.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No team or recruiter profiles configured yet. Add members to assign attribution.</td></tr>`;
+        return;
+      }
+      appData.teams.forEach((t, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${t.recruiter}</strong></td>
+            <td>${t.teamLead}</td>
+            <td>${t.team}</td>
+            <td><span class="badge badge-success">${t.status}</span></td>
+            <td><button class="btn btn-danger" style="padding:2px 6px;" onclick="deleteRecord('teams', ${i}, 'INDEX')"><i class="fa-solid fa-trash"></i></button></td>
+          </tr>
+        `;
+      });
+    }
+
+    /* Record Deletion Utility */
+    function deleteRecord(collection, id, key = 'id') {
+      if (!confirm("Are you sure you want to permanently delete this record?")) return;
+      if (key === 'INDEX') {
+        appData[collection].splice(id, 1);
+      } else {
+        appData[collection] = appData[collection].filter(x => x[key] !== id);
+      }
+      saveState();
+      // Refresh active view
+      const activeTab = document.querySelector('.tab-content.active').id.replace('tab-', '');
+      switchTab(activeTab);
+    }
+
+    /* Settings save */
+    function saveConfig() {
+      appData.config.defaultGst = Number(document.getElementById('cfg-gst-default').value);
+      appData.config.forexPolicy = document.getElementById('cfg-forex-policy').value;
+      saveState();
+    }
+
+    /* =========================================================================
+       MODULE 1: EXECUTIVE DASHBOARD & REAL-TIME REPORTING AGGREGATOR
+       ========================================================================= */
+    let chartRev = null;
+    let chartProf = null;
+
+    function applyFilters() {
+      const p = document.getElementById('filt-period').value;
+      document.getElementById('custom-range').style.display = (p === 'CUSTOM') ? 'flex' : 'none';
+      renderDashboard();
+    }
+
+    function filterData() {
+      const p = document.getElementById('filt-period').value;
+      const team = document.getElementById('filt-team').value;
+      const rec = document.getElementById('filt-recruiter').value;
+      const client = document.getElementById('filt-client').value;
+      const revType = document.getElementById('filt-revtype').value;
+
+      const now = new Date();
+      const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+      // Date check predicate
+      function matchPeriod(dateStr) {
+        if (!dateStr || p === 'ALL') return true;
+        if (p === 'THIS_MONTH') return dateStr.startsWith(curMonth);
+        if (p === 'LAST_MONTH') return dateStr.startsWith(lastMonth);
+        if (p === 'THIS_YEAR') return dateStr.startsWith(String(now.getFullYear()));
+        if (p === 'THIS_QUARTER') {
+          const q = Math.floor(now.getMonth() / 3);
+          const d = new Date(dateStr);
+          return Math.floor(d.getMonth() / 3) === q && d.getFullYear() === now.getFullYear();
+        }
+        if (p === 'CUSTOM') {
+          const from = document.getElementById('filt-date-from').value;
+          const to = document.getElementById('filt-date-to').value;
+          if (from && dateStr < from) return false;
+          if (to && dateStr > to) return false;
+          return true;
+        }
+        return true;
+      }
+
+      // Filter Contracts
+      const filteredContracts = (revType === 'FULLTIME') ? [] : appData.contracts.filter(c => {
+        if (!matchPeriod(c.month || c.invDate)) return false;
+        if (team !== 'ALL' && c.team !== team) return false;
+        if (rec !== 'ALL' && c.recruiter !== rec) return false;
+        if (client !== 'ALL' && c.client !== client) return false;
+        return true;
+      });
+
+      // Filter Full-Time
+      const filteredFTE = (revType === 'CONTRACT') ? [] : appData.fulltimes.filter(f => {
+        if (!matchPeriod(f.doj || f.invDate)) return false;
+        if (team !== 'ALL' && f.team !== team) return false;
+        if (rec !== 'ALL' && f.recruiter !== rec) return false;
+        if (client !== 'ALL' && f.client !== client) return false;
+        return true;
+      });
+
+      return { contracts: filteredContracts, fulltimes: filteredFTE };
+    }
+
+    function renderDashboard() {
+      populateDropdowns();
+      const { contracts, fulltimes } = filterData();
+
+      // Core Aggregations
+      const contractRev = contracts.reduce((acc, x) => acc + (x.revenueINR || 0), 0);
+      const fteRev = fulltimes.reduce((acc, x) => acc + (x.revenueINR || 0), 0);
+      const totalRevExclGST = contractRev + fteRev;
+
+      const contractCosts = contracts.reduce((acc, x) => acc + (x.totalCost || 0), 0);
+      const standaloneExpenses = appData.expenses.reduce((acc, x) => acc + (x.amountINR || 0), 0);
+      const totalCosts = contractCosts + standaloneExpenses;
+
+      const grossProfit = totalRevExclGST - totalCosts;
+      const profitMarginPct = totalRevExclGST > 0 ? (grossProfit / totalRevExclGST) * 100 : 0;
+
+      const contractInvoiced = contracts.reduce((acc, x) => acc + (x.invTotal || 0), 0);
+      const fteInvoiced = fulltimes.reduce((acc, x) => acc + (x.invTotal || 0), 0);
+      const totalInvoicedInclGST = contractInvoiced + fteInvoiced;
+      const totalGSTBilled = totalInvoicedInclGST - totalRevExclGST;
+
+      const contractCollected = contracts.reduce((acc, x) => acc + (x.paidAmount || 0), 0);
+      const fteCollected = fulltimes.reduce((acc, x) => acc + (x.paidAmount || 0), 0);
+      const totalCollected = contractCollected + fteCollected;
+
+      const totalOutstanding = totalInvoicedInclGST - totalCollected;
+
+      // Overdue and Short Payments
+      const allInvs = getAllInvoices();
+      const overdueTotal = allInvs.filter(x => x.daysOverdue > 0).reduce((acc, x) => acc + x.outstanding, 0);
+      const shortPayTotal = allInvs.filter(x => x.diff > 0).reduce((acc, x) => acc + x.diff, 0);
+
+      // Populate KPI DOM
+      document.getElementById('kpi-total-rev').innerText = formatINR(totalRevExclGST);
+      document.getElementById('kpi-contract-rev').innerText = formatINR(contractRev);
+      document.getElementById('kpi-fte-rev').innerText = formatINR(fteRev);
+
+      document.getElementById('kpi-profit').innerText = formatINR(grossProfit);
+      document.getElementById('kpi-profit-pct').innerText = profitMarginPct.toFixed(2) + "%";
+
+      document.getElementById('kpi-total-cost').innerText = formatINR(totalCosts);
+      document.getElementById('kpi-contractor-cost').innerText = formatINR(contractCosts);
+      document.getElementById('kpi-exp-cost').innerText = formatINR(standaloneExpenses);
+
+      document.getElementById('kpi-invoiced').innerText = formatINR(totalInvoicedInclGST);
+      document.getElementById('kpi-gst-billed').innerText = formatINR(totalGSTBilled);
+
+      document.getElementById('kpi-collected').innerText = formatINR(totalCollected);
+      document.getElementById('kpi-outstanding').innerText = formatINR(totalOutstanding);
+      document.getElementById('kpi-overdue').innerText = formatINR(overdueTotal);
+      document.getElementById('kpi-shortpaid').innerText = formatINR(shortPayTotal);
+
+      // Render Dynamic Exception Chips
+      renderExceptionsAlerts(allInvs);
+
+      // Render Charts
+      renderCharts(contracts, fulltimes);
+
+      // Render Tables
+      renderTeamPerformance(contracts, fulltimes);
+      renderClientPerformance(contracts, fulltimes);
+    }
+
+    function renderExceptionsAlerts(invoices) {
+      const container = document.getElementById('alert-chips');
+      const alerts = [];
+
+      const overdueCount = invoices.filter(x => x.daysOverdue > 0).length;
+      if (overdueCount > 0) alerts.push({ label: `${overdueCount} Overdue Invoices`, type: 'alert-danger', tab: 'followups' });
+
+      const shortCount = invoices.filter(x => x.diff > 0).length;
+      if (shortCount > 0) alerts.push({ label: `${shortCount} Short-Paid Invoices`, type: 'alert-danger', tab: 'followups' });
+
+      const pendingContractInvs = appData.contracts.filter(c => !c.invNo).length;
+      if (pendingContractInvs > 0) alerts.push({ label: `${pendingContractInvs} Contract Billable Pending Invoices`, type: 'alert-warning', tab: 'contract' });
+
+      const pendingFTEInvs = appData.fulltimes.filter(f => !f.invNo).length;
+      if (pendingFTEInvs > 0) alerts.push({ label: `${pendingFTEInvs} FTE Placements Pending Invoices`, type: 'alert-warning', tab: 'fulltime' });
+
+      if (alerts.length === 0) {
+        container.innerHTML = `<span class="badge badge-success" style="padding:6px 12px;"><i class="fa-solid fa-circle-check"></i> Zero commercial exceptions detected. Invoices and cash tracking healthy.</span>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      alerts.forEach(a => {
+        container.innerHTML += `<span class="alert-chip ${a.type}" onclick="switchTab('${a.tab}')">${a.label} &rarr;</span>`;
+      });
+    }
+
+    function renderCharts(contracts, fulltimes) {
+      // Group monthly revenue
+      const months = {};
+      contracts.forEach(c => {
+        const m = c.month || (c.invDate ? c.invDate.slice(0,7) : 'Unknown');
+        if (!months[m]) months[m] = { contract: 0, fte: 0, cost: 0 };
+        months[m].contract += (c.revenueINR || 0);
+        months[m].cost += (c.totalCost || 0);
+      });
+
+      fulltimes.forEach(f => {
+        const m = f.doj ? f.doj.slice(0,7) : (f.invDate ? f.invDate.slice(0,7) : 'Unknown');
+        if (!months[m]) months[m] = { contract: 0, fte: 0, cost: 0 };
+        months[m].fte += (f.revenueINR || 0);
+      });
+
+      const sortedMonths = Object.keys(months).sort();
+      const contractData = sortedMonths.map(m => months[m].contract);
+      const fteData = sortedMonths.map(m => months[m].fte);
+      const totalRevData = sortedMonths.map(m => months[m].contract + months[m].fte);
+      const costData = sortedMonths.map(m => months[m].cost);
+      const profitData = totalRevData.map((rev, i) => rev - costData[i]);
+
+      // Chart 1: Revenue Breakdown
+      if (chartRev) chartRev.destroy();
+      const ctx1 = document.getElementById('chartMonthlyRev').getContext('2d');
+      chartRev = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: sortedMonths.length ? sortedMonths : ['No Data'],
+          datasets: [
+            { label: 'Contract Revenue', data: contractData, backgroundColor: '#2563eb' },
+            { label: 'Full-Time Revenue', data: fteData, backgroundColor: '#10b981' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { stacked: true }, y: { stacked: true } }
+        }
+      });
+
+      // Chart 2: Profitability
+      if (chartProf) chartProf.destroy();
+      const ctx2 = document.getElementById('chartProfitability').getContext('2d');
+      chartProf = new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: sortedMonths.length ? sortedMonths : ['No Data'],
+          datasets: [
+            { label: 'Revenue (Excl. GST)', data: totalRevData, borderColor: '#2563eb', fill: false },
+            { label: 'Total Cost', data: costData, borderColor: '#ef4444', fill: false },
+            { label: 'Gross Profit', data: profitData, borderColor: '#10b981', fill: false, tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function renderTeamPerformance(contracts, fulltimes) {
+      const tbody = document.querySelector('#tbl-dash-team tbody');
+      tbody.innerHTML = "";
+
+      const teamMap = {};
+      const getTeamObj = (t) => {
+        if (!teamMap[t]) teamMap[t] = { name: t, contractRev: 0, fteRev: 0, totalRev: 0, costs: 0, invoiced: 0, collected: 0 };
+        return teamMap[t];
+      };
+
+      contracts.forEach(c => {
+        const o = getTeamObj(c.team || "Unassigned");
+        o.contractRev += c.revenueINR;
+        o.costs += c.totalCost;
+        o.invoiced += c.invTotal;
+        o.collected += c.paidAmount;
+      });
+
+      fulltimes.forEach(f => {
+        const o = getTeamObj(f.team || "Unassigned");
+        o.fteRev += f.revenueINR;
+        o.invoiced += f.invTotal;
+        o.collected += f.paidAmount;
+      });
+
+      const keys = Object.keys(teamMap);
+      if (keys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No team revenue activity found.</td></tr>`;
+        return;
+      }
+
+      keys.forEach(k => {
+        const item = teamMap[k];
+        item.totalRev = item.contractRev + item.fteRev;
+        const profit = item.totalRev - item.costs;
+        const profitPct = item.totalRev > 0 ? (profit / item.totalRev) * 100 : 0;
+        const outstanding = item.invoiced - item.collected;
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${item.name}</strong></td>
+            <td class="num">${formatINR(item.contractRev)}</td>
+            <td class="num">${formatINR(item.fteRev)}</td>
+            <td class="num calc-cell">${formatINR(item.totalRev)}</td>
+            <td class="num">${formatINR(item.costs)}</td>
+            <td class="num calc-cell" style="color:${profit >= 0 ? 'var(--success)' : 'var(--danger)'}">${formatINR(profit)}</td>
+            <td class="num">${profitPct.toFixed(1)}%</td>
+            <td class="num">${formatINR(item.invoiced)}</td>
+            <td class="num">${formatINR(item.collected)}</td>
+            <td class="num" style="font-weight:700; color:${outstanding > 0 ? 'var(--danger)' : 'inherit'}">${formatINR(outstanding)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderClientPerformance(contracts, fulltimes) {
+      const tbody = document.querySelector('#tbl-dash-client tbody');
+      tbody.innerHTML = "";
+
+      const clientMap = {};
+      const getClientObj = (c) => {
+        if (!clientMap[c]) clientMap[c] = { name: c, contractRev: 0, fteRev: 0, totalRev: 0, costs: 0, invoiced: 0, collected: 0 };
+        return clientMap[c];
+      };
+
+      contracts.forEach(c => {
+        const o = getClientObj(c.client || "Unassigned");
+        o.contractRev += c.revenueINR;
+        o.costs += c.totalCost;
+        o.invoiced += c.invTotal;
+        o.collected += c.paidAmount;
+      });
+
+      fulltimes.forEach(f => {
+        const o = getClientObj(f.client || "Unassigned");
+        o.fteRev += f.revenueINR;
+        o.invoiced += f.invTotal;
+        o.collected += f.paidAmount;
+      });
+
+      const keys = Object.keys(clientMap);
+      if (keys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No client accounts active in the selected timeframe.</td></tr>`;
+        return;
+      }
+
+      keys.forEach(k => {
+        const item = clientMap[k];
+        item.totalRev = item.contractRev + item.fteRev;
+        const profit = item.totalRev - item.costs;
+        const profitPct = item.totalRev > 0 ? (profit / item.totalRev) * 100 : 0;
+        const outstanding = item.invoiced - item.collected;
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${item.name}</strong></td>
+            <td class="num">${formatINR(item.contractRev)}</td>
+            <td class="num">${formatINR(item.fteRev)}</td>
+            <td class="num calc-cell">${formatINR(item.totalRev)}</td>
+            <td class="num">${formatINR(item.costs)}</td>
+            <td class="num calc-cell" style="color:${profit >= 0 ? 'var(--success)' : 'var(--danger)'}">${formatINR(profit)}</td>
+            <td class="num">${profitPct.toFixed(1)}%</td>
+            <td class="num">${formatINR(item.invoiced)}</td>
+            <td class="num">${formatINR(item.collected)}</td>
+            <td class="num" style="font-weight:700; color:${outstanding > 0 ? 'var(--danger)' : 'inherit'}">${formatINR(outstanding)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    /* =========================================================================
+       BACKUP, EXPORT & RESTORE ENGINE
+       ========================================================================= */
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `StaffingOps_Backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function triggerImport() {
+      document.getElementById('importInput').click();
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.contracts && parsed.clients) {
+            appData = parsed;
+            saveState();
+            alert("Database successfully restored!");
+            location.reload();
+          } else {
+            alert("Invalid schema file.");
+          }
+        } catch (err) {
+          alert("Error parsing backup JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function clearAllData() {
+      if (confirm("CRITICAL WARNING: This will permanently wipe all entered contracts, clients, placements, and invoices. Do you wish to proceed?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        appData = defaultState;
+        saveState();
+        location.reload();
+      }
+    }
+
+    // App Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      populateDropdowns();
+      renderDashboard();
+    });
+  </script>
+</body>
+</html>
